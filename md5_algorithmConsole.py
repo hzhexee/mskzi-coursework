@@ -117,7 +117,7 @@ def finalize_hash(buffers):
     return ''.join(buffer.to_bytes(4, byteorder='little').hex() for buffer in buffers)
 
 if __name__ == "__main__":
-    text = "hello world"
+    text = "фф"
     byte_data = visualize_text_to_bytearray(text)
     padded_data = visualize_padding(byte_data)
     buffers = buffer_init()

@@ -89,6 +89,51 @@ def md5_process_block(block, buffers):
 
     return buffers
 
+def md5_process_block_with_details(block, buffers):
+    """Обрабатывает блок с подробной визуализацией."""
+    M = [int.from_bytes(block[i:i + 4], byteorder='little') for i in range(0, 64, 4)]
+    A, B, C, D = buffers
+    original_buffers = buffers.copy()
+    
+    details = []
+    details.append("Исходные значения буферов:")
+    details.append(f"A = {A:#010x}, B = {B:#010x}, C = {C:#010x}, D = {D:#010x}\n")
+
+    for round_index, func in enumerate([F, G, H, I]):
+        details.append(f"=== Раунд {round_index + 1} ===")
+        for i in range(16):
+            step = round_index * 16 + i
+            if round_index == 0:
+                k = i
+            elif round_index == 1:
+                k = (5 * i + 1) % 16
+            elif round_index == 2:
+                k = (3 * i + 5) % 16
+            else:
+                k = (7 * i) % 16
+
+            s = S[round_index][i % 4]
+            temp = (A + func(B, C, D) + M[k] + T[step]) & 0xFFFFFFFF
+            new_A = (B + left_rotate(temp, s)) & 0xFFFFFFFF
+
+            details.append(f"Шаг {step + 1}:")
+            details.append(f"Функция: {func.__name__}")
+            details.append(f"M[{k}] = {M[k]:#010x}, T[{step}] = {T[step]:#010x}, S = {s}")
+            details.append(f"До: A = {A:#010x}, B = {B:#010x}, C = {C:#010x}, D = {D:#010x}")
+            details.append(f"После: A = {new_A:#010x}\n")
+
+            A, D, C, B = D, C, B, new_A
+
+    buffers[0] = (buffers[0] + A) & 0xFFFFFFFF
+    buffers[1] = (buffers[1] + B) & 0xFFFFFFFF
+    buffers[2] = (buffers[2] + C) & 0xFFFFFFFF
+    buffers[3] = (buffers[3] + D) & 0xFFFFFFFF
+
+    details.append("Финальные значения буферов:")
+    details.append(f"A = {buffers[0]:#010x}, B = {buffers[1]:#010x}, C = {buffers[2]:#010x}, D = {buffers[3]:#010x}")
+    
+    return buffers, '\n'.join(details)
+
 def process_blocks(data: bytes, buffers):
     """
     Обрабатывает все блоки данных.
@@ -97,6 +142,19 @@ def process_blocks(data: bytes, buffers):
     for i in range(0, len(data), 64):
         block = data[i:i + 64]
         buffers = md5_process_block(block, buffers)
+    return buffers
+
+def process_blocks_with_detailed_visualization(data: bytes, buffers, callback=None):
+    """Обрабатывает блоки с подробной визуализацией."""
+    for i in range(0, len(data), 64):
+        block = data[i:i + 64]
+        block_hex = bytearray_visualize(block)
+        details = f"\n=== Обработка блока {i//64 + 1} ===\n"
+        details += f"Данные блока:\n{block_hex}\n"
+        
+        buffers, block_details = md5_process_block_with_details(block, buffers)
+        if callback:
+            callback(details + block_details)
     return buffers
 
 def finalize_hash(buffers):
@@ -114,3 +172,29 @@ def calculate_md5(text: str) -> str:
     buffers = buffer_init()
     final_buffers = process_blocks(padded_data, buffers)
     return finalize_hash(final_buffers)
+
+def visualize_padding(original: bytes, padded: bytearray) -> str:
+    """Visualizes the padding process."""
+    original_hex = bytearray_visualize(original)
+    padded_hex = bytearray_visualize(padded)
+    return f"Начальное количество байт ({len(original)} байт):\n{original_hex}\n\nКоличество байт после добавления padding ({len(padded)} байт):\n{padded_hex}"
+
+def visualize_block_process(block_number: int, block: bytes, buffers_before: list, buffers_after: list) -> str:
+    """Visualizes the processing of one block."""
+    block_hex = bytearray_visualize(block)
+    before = [f"{b:08x}" for b in buffers_before]
+    after = [f"{b:08x}" for b in buffers_after]
+    return (f"Блок {block_number}:\n{block_hex}\n\n"
+            f"Буферы до:\nA: {before[0]}\nB: {before[1]}\nC: {before[2]}\nD: {before[3]}\n\n"
+            f"Буферы после:\nA: {after[0]}\nB: {after[1]}\nC: {after[2]}\nD: {after[3]}")
+
+def process_blocks_with_visualization(data: bytes, buffers, callback=None):
+    """Process blocks with visualization callback."""
+    for i in range(0, len(data), 64):
+        block = data[i:i + 64]
+        buffers_before = buffers.copy()
+        buffers = md5_process_block(block, buffers)
+        if callback:
+            block_info = visualize_block_process(i//64 + 1, block, buffers_before, buffers)
+            callback(block_info)
+    return buffers
