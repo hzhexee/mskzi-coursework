@@ -20,19 +20,19 @@ class StyledFrame(QFrame):
 class MD5VisualizerWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("MD5 Visualizer")
+        self.setWindowTitle("Визуализация алгоритма хеширования MD5")
         self.setMinimumSize(1200, 800)
         self.setupUI()
 
     def setupUI(self):
         # Create menu bar
         menubar = self.menuBar()
-        file_menu = menubar.addMenu("File")
+        file_menu = menubar.addMenu("Настройки")
         
         # Add menu actions
-        hash_string_action = QAction("Hash String", self)
+        hash_string_action = QAction("Хеш от строки", self)
         hash_string_action.setShortcut("Ctrl+H")
-        exit_action = QAction("Exit", self)
+        exit_action = QAction("Выход", self)
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(QApplication.quit)
         
@@ -46,35 +46,42 @@ class MD5VisualizerWindow(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
 
         # Input section
-        input_frame = StyledFrame("Input")
+        input_frame = StyledFrame("Ввод")
         input_layout = QHBoxLayout()
         
         self.input_field = QLineEdit()
-        self.input_field.setPlaceholderText("Enter text to hash...")
+        self.input_field.setPlaceholderText("Введите текст...")
         
-        self.hash_button = QPushButton("Calculate Hash")
-        self.hash_button.clicked.connect(self.calculate_md5)
-        
-        input_layout.addWidget(self.input_field, stretch=4)
-        input_layout.addWidget(self.hash_button, stretch=1)
+        input_layout.addWidget(self.input_field)
         input_frame.layout.addLayout(input_layout)
         main_layout.addWidget(input_frame)
 
         # Visualization section
-        viz_frame = StyledFrame("Visualization")
+        viz_frame = StyledFrame("Визуализация")
         
         # Add navigation controls
         nav_layout = QHBoxLayout()
-        self.prev_button = QPushButton("◀ Previous")
-        self.next_button = QPushButton("Next ▶")
+        self.prev_button = QPushButton("◀ Предыдущий шаг") 
+        self.next_button = QPushButton("Следующий шаг ▶")
+        self.hash_button = QPushButton("Вычислить хеш")
+        
         self.prev_button.clicked.connect(self.show_previous_step)
         self.next_button.clicked.connect(self.show_next_step)
-        self.step_label = QLabel("Step 0/0")
+        self.hash_button.clicked.connect(self.calculate_md5)
+        
+        self.step_label = QLabel("Шаг 0/0")
         self.step_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         nav_layout.addWidget(self.prev_button)
         nav_layout.addWidget(self.step_label)
         nav_layout.addWidget(self.next_button)
+        nav_layout.addWidget(self.hash_button)
+        
+        # Initially hide navigation buttons
+        self.prev_button.hide()
+        self.next_button.hide()
+        self.step_label.hide()
+        
         viz_frame.layout.addLayout(nav_layout)
         
         self.visualization = QTextEdit()
@@ -97,9 +104,21 @@ class MD5VisualizerWindow(QMainWindow):
         self.update_navigation_buttons()
 
     def update_navigation_buttons(self):
-        self.prev_button.setVisible(self.current_step > 0)
+        if not self.steps:
+            self.prev_button.hide()
+            self.next_button.hide()
+            self.step_label.hide()
+            self.hash_button.show()
+            return
+
+        self.prev_button.show()
+        self.next_button.show()
+        self.step_label.show()
+        self.hash_button.hide()
+        
+        self.prev_button.setEnabled(self.current_step > 0)
         self.next_button.setEnabled(self.current_step < len(self.steps) - 1)
-        self.step_label.setText(f"Step {self.current_step + 1}/{len(self.steps)}" if self.steps else "Step 0/0")
+        self.step_label.setText(f"Шаг {self.current_step + 1}/{len(self.steps)}")
 
     def show_previous_step(self):
         if self.current_step > 0:
@@ -122,17 +141,23 @@ class MD5VisualizerWindow(QMainWindow):
         self.current_step = 0
         text = self.input_field.text()
 
+        if not text:
+            return
+
+        # Hide hash button and show navigation
+        self.update_navigation_buttons()
+        
         # Step 1: Convert to bytes
         byte_data = text_to_bytearray(text)
-        self.store_step(f"Step 1: Converting text to bytes\n{bytearray_visualize(byte_data)}")
+        self.store_step(f"Шаг 1: Преобразование текста в байты\n{bytearray_visualize(byte_data)}")
 
         # Step 2: Add padding
         padded_data = add_padding(byte_data)
-        self.store_step(f"Step 2: Adding padding\n{visualize_padding(byte_data, padded_data)}")
+        self.store_step(f"Шаг 2: Добавление padding\n{visualize_padding(byte_data, padded_data)}")
 
         # Step 3: Initialize buffers
         buffers = buffer_init()
-        self.store_step("Step 3: Initializing buffers\n" + 
+        self.store_step(f"Шаг 3: Инициализация буферов\n" + 
                       "\n".join(f"{name}: {value:08x}" for name, value in 
                               zip(['A', 'B', 'C', 'D'], buffers)))
 
@@ -141,7 +166,7 @@ class MD5VisualizerWindow(QMainWindow):
 
         # Step 5: Final hash
         result = finalize_hash(final_buffers)
-        self.store_step(f"Final MD5 Hash:\n{result}")
+        self.store_step(f"Шаг 5: Финальный хэш\n{result}")
 
         # Show first step and update navigation
         if self.steps:
