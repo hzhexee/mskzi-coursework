@@ -8,6 +8,14 @@ from md5_algorithm import (text_to_bytearray, add_padding, buffer_init,
                          process_blocks_with_detailed_visualization, finalize_hash,
                          visualize_padding, bytearray_visualize)
 
+## TODO: Исправить отображение битов в шагах; 
+# добавить кнопку "Сбросить" для очистки визуализации; 
+# добавить кнопку "Сохранить" для сохранения визуализации в файл
+# добавить кнопку "Скопировать" для копирования визуализации в буфер обмена
+# добавить кнопку "О программе" для отображения информации о программе
+# добавить кнопку "Справка" для отображения справочной информации
+# Откорректировать 5 шаг, сделать отображение буферов в littel-endian с разделителями
+
 class StyledFrame(QFrame):
     def __init__(self, title="", parent=None):
         super().__init__(parent)
