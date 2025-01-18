@@ -111,12 +111,16 @@ class MD5VisualizerWindow(QMainWindow):
             self.hash_button.show()
             return
 
-        self.prev_button.show()
         self.next_button.show()
         self.step_label.show()
         self.hash_button.hide()
         
-        self.prev_button.setEnabled(self.current_step > 0)
+        # Show prev button only if not on first step
+        if self.current_step > 0:
+            self.prev_button.show()
+        else:
+            self.prev_button.hide()
+        
         self.next_button.setEnabled(self.current_step < len(self.steps) - 1)
         self.step_label.setText(f"Шаг {self.current_step + 1}/{len(self.steps)}")
 

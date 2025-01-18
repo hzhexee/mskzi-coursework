@@ -9,9 +9,59 @@ def text_to_bytearray(text: str) -> bytes:
 
 def bytearray_visualize(byte_data: bytes) -> str:
     """
-    Визуализирует байтовый массив.
+    Визуализирует байтовый массив с отображением символов.
     """
-    return binascii.hexlify(byte_data, sep='-').decode('utf-8')
+    hex_line = binascii.hexlify(byte_data, sep='-').decode('utf-8')
+    hex_values = hex_line.split('-')
+    result = []
+    
+    # Add the full line of bytes first
+    result.append(hex_line)
+    result.append("")  # Empty line for better readability
+    
+    # Decode the full byte array to get proper Unicode characters
+    try:
+        decoded_text = byte_data.decode('utf-8')
+        chars = list(decoded_text)
+        char_index = 0
+        bytes_per_char = []
+        
+        # Calculate how many bytes each character uses
+        temp_data = byte_data
+        while temp_data:
+            for i in range(1, 5):  # UTF-8 uses 1-4 bytes per character
+                try:
+                    temp_data[:i].decode('utf-8')
+                    bytes_per_char.append(i)
+                    temp_data = temp_data[i:]
+                    break
+                except UnicodeDecodeError:
+                    continue
+        
+        # Add detailed visualization
+        i = 0
+        char_index = 0
+        while i < len(hex_values):
+            if char_index < len(chars):
+                char = chars[char_index]
+                num_bytes = bytes_per_char[char_index]
+                hex_vals = '-'.join(hex_values[i:i+num_bytes])
+                result.append(f"Символ {char}: {hex_vals}")
+                i += num_bytes
+                char_index += 1
+            else:
+                # For any remaining bytes (like padding)
+                result.append(f"Байт: {hex_values[i]}")
+                i += 1
+                
+    except UnicodeDecodeError:
+        # Fallback for non-text data
+        for i, hex_val in enumerate(hex_values):
+            byte = byte_data[i]
+            char = chr(byte) if 32 <= byte <= 126 else '.'
+            result.append(f"Байт: {hex_val}")
+    
+    return '\n'.join(result)
 
 def add_padding(byte_data: bytes) -> bytearray:
     """
