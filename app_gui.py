@@ -62,43 +62,91 @@ class MD5VisualizerWindow(QMainWindow):
 
         # Visualization section
         viz_frame = StyledFrame("Visualization")
+        
+        # Add navigation controls
+        nav_layout = QHBoxLayout()
+        self.prev_button = QPushButton("◀ Previous")
+        self.next_button = QPushButton("Next ▶")
+        self.prev_button.clicked.connect(self.show_previous_step)
+        self.next_button.clicked.connect(self.show_next_step)
+        self.step_label = QLabel("Step 0/0")
+        self.step_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        nav_layout.addWidget(self.prev_button)
+        nav_layout.addWidget(self.step_label)
+        nav_layout.addWidget(self.next_button)
+        viz_frame.layout.addLayout(nav_layout)
+        
         self.visualization = QTextEdit()
         self.visualization.setReadOnly(True)
-        self.visualization.setFont(QFont("Courier New", 10))
+        # Update font and styling
+        self.visualization.setFont(QFont("Segoe UI", 12))
+        self.visualization.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.visualization.setStyleSheet("""
+            QTextEdit {
+                padding: 20px;
+                line-height: 1.5;
+            }
+        """)
         viz_frame.layout.addWidget(self.visualization)
         main_layout.addWidget(viz_frame)
 
-    def show_step(self, text):
-        self.visualization.append(f"{text}\n{'='*50}\n")
-        self.visualization.verticalScrollBar().setValue(
-            self.visualization.verticalScrollBar().maximum()
-        )
-        QApplication.processEvents()
+        # Initialize step tracking
+        self.current_step = 0
+        self.steps = []
+        self.update_navigation_buttons()
+
+    def update_navigation_buttons(self):
+        self.prev_button.setVisible(self.current_step > 0)
+        self.next_button.setEnabled(self.current_step < len(self.steps) - 1)
+        self.step_label.setText(f"Step {self.current_step + 1}/{len(self.steps)}" if self.steps else "Step 0/0")
+
+    def show_previous_step(self):
+        if self.current_step > 0:
+            self.current_step -= 1
+            self.visualization.setText(self.steps[self.current_step])
+            self.update_navigation_buttons()
+
+    def show_next_step(self):
+        if self.current_step < len(self.steps) - 1:
+            self.current_step += 1
+            self.visualization.setText(self.steps[self.current_step])
+            self.update_navigation_buttons()
+
+    def store_step(self, text):
+        self.steps.append(f"{text}\n")
 
     def calculate_md5(self):
         self.visualization.clear()
+        self.steps = []
+        self.current_step = 0
         text = self.input_field.text()
 
         # Step 1: Convert to bytes
         byte_data = text_to_bytearray(text)
-        self.show_step(f"Step 1: Converting text to bytes\n{bytearray_visualize(byte_data)}")
+        self.store_step(f"Step 1: Converting text to bytes\n{bytearray_visualize(byte_data)}")
 
         # Step 2: Add padding
         padded_data = add_padding(byte_data)
-        self.show_step(f"Step 2: Adding padding\n{visualize_padding(byte_data, padded_data)}")
+        self.store_step(f"Step 2: Adding padding\n{visualize_padding(byte_data, padded_data)}")
 
         # Step 3: Initialize buffers
         buffers = buffer_init()
-        self.show_step("Step 3: Initializing buffers\n" + 
+        self.store_step("Step 3: Initializing buffers\n" + 
                       "\n".join(f"{name}: {value:08x}" for name, value in 
                               zip(['A', 'B', 'C', 'D'], buffers)))
 
         # Step 4: Process blocks with detailed visualization
-        final_buffers = process_blocks_with_detailed_visualization(padded_data, buffers, self.show_step)
+        final_buffers = process_blocks_with_detailed_visualization(padded_data, buffers, self.store_step)
 
         # Step 5: Final hash
         result = finalize_hash(final_buffers)
-        self.show_step(f"Final MD5 Hash:\n{result}")
+        self.store_step(f"Final MD5 Hash:\n{result}")
+
+        # Show first step and update navigation
+        if self.steps:
+            self.visualization.setText(self.steps[0])
+            self.update_navigation_buttons()
 
 def main():
     app = QApplication(sys.argv)
