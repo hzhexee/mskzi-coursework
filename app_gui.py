@@ -1,20 +1,37 @@
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                            QHBoxLayout, QLineEdit, QPushButton, QTextEdit, 
-                            QMenuBar, QMenu, QLabel, QFrame)
+import sys
+from PyQt6.QtWidgets import (
+    QApplication, 
+    QMainWindow, 
+    QWidget, 
+    QVBoxLayout, 
+    QHBoxLayout, 
+    QLineEdit, 
+    QPushButton, 
+    QTextEdit, 
+    QMenuBar, 
+    QMenu, 
+    QLabel, 
+    QFrame)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QFont
-import sys
-from md5_algorithm import (text_to_bytearray, add_padding, buffer_init,
-                         process_blocks_with_detailed_visualization, finalize_hash,
-                         visualize_padding, bytearray_visualize)
+from md5_algorithm import (
+    text_to_bytearray,
+    add_padding,
+    buffer_init,
+    process_blocks_with_detailed_visualization,
+    finalize_hash,
+    visualize_padding,
+    bytearray_visualize
+)
 
-## TODO: Исправить отображение битов в шагах; 
-# добавить кнопку "Сбросить" для очистки визуализации; 
-# добавить кнопку "Сохранить" для сохранения визуализации в файл
-# добавить кнопку "Скопировать" для копирования визуализации в буфер обмена
-# добавить кнопку "О программе" для отображения информации о программе
-# добавить кнопку "Справка" для отображения справочной информации
-# Откорректировать 5 шаг, сделать отображение буферов в littel-endian с разделителями
+## TODO: 
+# 1.Исправить отображение битов в шагах; 
+# 2.Добавить кнопку "Сбросить" для очистки визуализации; 
+# 3.Добавить кнопку "Сохранить" для сохранения визуализации в файл
+# 4.Добавить кнопку "Скопировать" для копирования визуализации в буфер обмена
+# 5.Добавить кнопку "О программе" для отображения информации о программе
+# 6.Добавить кнопку "Справка" для отображения справочной информации
+# 7.Откорректировать 5 шаг, сделать отображение буферов в littel-endian с разделителями
 
 class StyledFrame(QFrame):
     def __init__(self, title="", parent=None):
