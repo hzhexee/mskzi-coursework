@@ -21,17 +21,16 @@ from md5_algorithm import (
     process_blocks_with_detailed_visualization,
     finalize_hash,
     visualize_padding,
-    bytearray_visualize
+    bytearray_visualize_with_chars
 )
 
 ## TODO: 
-# 1.Исправить отображение битов в шагах; 
-# 2.Добавить кнопку "Сбросить" для очистки визуализации; 
-# 3.Добавить кнопку "Сохранить" для сохранения визуализации в файл
-# 4.Добавить кнопку "Скопировать" для копирования визуализации в буфер обмена
-# 5.Добавить кнопку "О программе" для отображения информации о программе
-# 6.Добавить кнопку "Справка" для отображения справочной информации
-# 7.Откорректировать 5 шаг, сделать отображение буферов в littel-endian с разделителями
+# 2. Добавить кнопку "Сбросить" для очистки визуализации; 
+# 3. Добавить кнопку "Сохранить" в MenuBar для сохранения визуализации в файл
+# 4. Добавить кнопку "Скопировать" в MenuBar для копирования визуализации в буфер обмена
+# 5. Добавить кнопку "О программе" в MenuBar для отображения информации о программе
+# 6. Добавить кнопку "Справка" в MenuBar для отображения справочной информации
+# 7. Откорректировать 5 шаг, сделать отображение буферов в littel-endian с разделителями
 
 class StyledFrame(QFrame):
     def __init__(self, title="", parent=None):
@@ -178,7 +177,7 @@ class MD5VisualizerWindow(QMainWindow):
         
         # Step 1: Convert to bytes
         byte_data = text_to_bytearray(text)
-        self.store_step(f"Шаг 1: Преобразование текста в байты\n{bytearray_visualize(byte_data)}")
+        self.store_step(f"Шаг 1: Преобразование текста в байты\n{bytearray_visualize_with_chars(byte_data)}")
 
         # Step 2: Add padding
         padded_data = add_padding(byte_data)
@@ -195,7 +194,24 @@ class MD5VisualizerWindow(QMainWindow):
 
         # Step 5: Final hash
         result = finalize_hash(final_buffers)
-        self.store_step(f"Шаг 5: Финальный хэш\n{result}")
+        buffer_visualization = []
+        for buffer in final_buffers:
+            # Convert to hex without '0x' prefix and pad with zeros
+            hex_value = f"{buffer:08x}"
+            # Group by 2 chars and reverse the groups (little-endian)
+            pairs = [hex_value[i:i+2] for i in range(0, 8, 2)]
+            formatted = ' '.join(pairs[::-1])
+            buffer_visualization.append(formatted)
+        
+        self.store_step(
+            f"Шаг 5: Финальный хэш\n\n"
+            f"Буферы в little-endian формате:\n"
+            f"A: {buffer_visualization[0]}\n"
+            f"B: {buffer_visualization[1]}\n"
+            f"C: {buffer_visualization[2]}\n"
+            f"D: {buffer_visualization[3]}\n\n"
+            f"Итоговый хэш (конкатенация буферов):\n{result}"
+        )
 
         # Show first step and update navigation
         if self.steps:

@@ -7,9 +7,10 @@ def text_to_bytearray(text: str) -> bytes:
     """
     return text.encode('utf-8')
 
-def bytearray_visualize(byte_data: bytes) -> str:
+def bytearray_visualize_with_chars(byte_data: bytes) -> str:
     """
     Визуализирует байтовый массив с отображением символов.
+    Используется для первого шага алгоритма.
     """
     hex_line = binascii.hexlify(byte_data, sep='-').decode('utf-8')
     hex_values = hex_line.split('-')
@@ -41,18 +42,13 @@ def bytearray_visualize(byte_data: bytes) -> str:
         # Add detailed visualization
         i = 0
         char_index = 0
-        while i < len(hex_values):
-            if char_index < len(chars):
-                char = chars[char_index]
-                num_bytes = bytes_per_char[char_index]
-                hex_vals = '-'.join(hex_values[i:i+num_bytes])
-                result.append(f"Символ {char}: {hex_vals}")
-                i += num_bytes
-                char_index += 1
-            else:
-                # For any remaining bytes (like padding)
-                result.append(f"Байт: {hex_values[i]}")
-                i += 1
+        while i < len(hex_values) and char_index < len(chars):
+            char = chars[char_index]
+            num_bytes = bytes_per_char[char_index]
+            hex_vals = '-'.join(hex_values[i:i+num_bytes])
+            result.append(f"Символ {char}: {hex_vals}")
+            i += num_bytes
+            char_index += 1
                 
     except UnicodeDecodeError:
         # Fallback for non-text data
@@ -62,6 +58,14 @@ def bytearray_visualize(byte_data: bytes) -> str:
             result.append(f"Байт: {hex_val}")
     
     return '\n'.join(result)
+
+def bytearray_visualize_simple(byte_data: bytes) -> str:
+    """
+    Простая визуализация байтового массива без отображения символов.
+    Используется для второго шага алгоритма и далее.
+    """
+    hex_line = binascii.hexlify(byte_data, sep='-').decode('utf-8')
+    return hex_line
 
 def add_padding(byte_data: bytes) -> bytearray:
     """
@@ -198,7 +202,7 @@ def process_blocks_with_detailed_visualization(data: bytes, buffers, callback=No
     """Обрабатывает блоки с подробной визуализацией."""
     for i in range(0, len(data), 64):
         block = data[i:i + 64]
-        block_hex = bytearray_visualize(block)
+        block_hex = bytearray_visualize_simple(block)
         details = f"\n=== Обработка блока {i//64 + 1} ===\n"
         details += f"Данные блока:\n{block_hex}\n"
         
@@ -225,13 +229,13 @@ def calculate_md5(text: str) -> str:
 
 def visualize_padding(original: bytes, padded: bytearray) -> str:
     """Visualizes the padding process."""
-    original_hex = bytearray_visualize(original)
-    padded_hex = bytearray_visualize(padded)
+    original_hex = bytearray_visualize_simple(original)
+    padded_hex = bytearray_visualize_simple(padded)
     return f"Начальное количество байт ({len(original)} байт):\n{original_hex}\n\nКоличество байт после добавления padding ({len(padded)} байт):\n{padded_hex}"
 
 def visualize_block_process(block_number: int, block: bytes, buffers_before: list, buffers_after: list) -> str:
     """Visualizes the processing of one block."""
-    block_hex = bytearray_visualize(block)
+    block_hex = bytearray_visualize_simple(block)
     before = [f"{b:08x}" for b in buffers_before]
     after = [f"{b:08x}" for b in buffers_after]
     return (f"Блок {block_number}:\n{block_hex}\n\n"
