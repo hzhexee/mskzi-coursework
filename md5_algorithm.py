@@ -230,8 +230,24 @@ def calculate_md5(text: str) -> str:
 def visualize_padding(original: bytes, padded: bytearray) -> str:
     """Visualizes the padding process."""
     original_hex = bytearray_visualize_simple(original)
-    padded_hex = bytearray_visualize_simple(padded)
-    return f"Начальное количество байт ({len(original)} байт):\n{original_hex}\n\nКоличество байт после добавления padding ({len(padded)} байт):\n{padded_hex}"
+    
+    # Вычисляем границы для padding и длины сообщения
+    padding_start = len(original) + 1  # +1 для байта 0x80
+    length_start = len(padded) - 8     # Последние 8 байт - длина
+    
+    # Разделяем на части
+    padding_hex = bytearray_visualize_simple(padded[len(original):length_start])
+    length_hex = bytearray_visualize_simple(padded[length_start:])
+    full_hex = bytearray_visualize_simple(padded)
+    
+    separator = "-" * 50
+    return (f"Полное сообщение после padding ({len(padded)} байт):\n{full_hex}\n\n"
+            f"{separator}\n"
+            f"Начальное сообщение ({len(original)} байт):\n{original_hex}\n\n"
+            f"{separator}\n"
+            f"Padding ({length_start - len(original)} байт):\n{padding_hex}\n\n"
+            f"{separator}\n"
+            f"Длина сообщения (8 байт):\n{length_hex}")
 
 def visualize_block_process(block_number: int, block: bytes, buffers_before: list, buffers_after: list) -> str:
     """Visualizes the processing of one block."""
