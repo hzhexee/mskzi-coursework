@@ -11,7 +11,8 @@ from PyQt6.QtWidgets import (
     QMenuBar, 
     QMenu, 
     QLabel, 
-    QFrame)
+    QFrame,
+    QScrollArea)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QFont
 from md5_algorithm import (
@@ -38,7 +39,6 @@ from md5_algorithm import (
 # 11. Добавить индикатор прогресса вычисления для больших входных данных
 # 12. Добавить возможность сравнения двух хешей
 # 13. Добавить визуализацию битовых операций на каждом шаге
-# 14. Добавить возможность пошагового автовоспроизведения с настраиваемой задержкой
 
 class StyledFrame(QFrame):
     def __init__(self, title="", parent=None):
@@ -116,18 +116,36 @@ class MD5VisualizerWindow(QMainWindow):
         
         viz_frame.layout.addLayout(nav_layout)
         
-        self.visualization = QTextEdit()
-        self.visualization.setReadOnly(True)
-        # Update font and styling
-        self.visualization.setFont(QFont("Segoe UI", 12))
+        # Создаем область прокрутки
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)  # Убираем границы
+        
+        # Создаем контейнер для содержимого
+        content_widget = QWidget()
+        content_layout = QVBoxLayout(content_widget)
+        
+        # Заменяем QTextEdit на QLabel
+        self.visualization = QLabel()
+        self.visualization.setWordWrap(True)
         self.visualization.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.visualization.setTextFormat(Qt.TextFormat.PlainText)
+        self.visualization.setFont(QFont("Segoe UI", 12))
         self.visualization.setStyleSheet("""
-            QTextEdit {
+            QLabel {
                 padding: 20px;
                 line-height: 1.5;
+                background: transparent;
+                color: #333333;
             }
         """)
-        viz_frame.layout.addWidget(self.visualization)
+        
+        content_layout.addWidget(self.visualization)
+        content_layout.addStretch()  # Добавляем растяжку снизу
+        
+        scroll_area.setWidget(content_widget)
+        viz_frame.layout.addWidget(scroll_area)
+        
         main_layout.addWidget(viz_frame)
 
         # Initialize step tracking
