@@ -12,7 +12,7 @@ QTabWidget::pane {
     border: none;
     background: #ffffff;
     border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    /* Удаляем свойство box-shadow */
 }
 
 QTabBar::tab {
@@ -35,7 +35,7 @@ QLineEdit {
     border-radius: 8px;
     background: white;
     margin: 5px 0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    /* Удаляем свойство box-shadow */
 }
 
 QLineEdit::selection {
@@ -60,23 +60,23 @@ QPushButton {
     border-radius: 8px;
     min-height: 38px;
     font-weight: 500;
-    box-shadow: 0 2px 5px rgba(113, 88, 226, 0.2);
+    /* Удаляем свойство box-shadow */
 }
 
 QPushButton:hover {
     background: #8c7ae6;
-    box-shadow: 0 4px 8px rgba(113, 88, 226, 0.3);
+    /* Удаляем свойство box-shadow */
 }
 
 QPushButton:pressed {
     background: #6045c8;
-    box-shadow: 0 1px 3px rgba(113, 88, 226, 0.2);
+    /* Удаляем свойство box-shadow */
 }
 
 QPushButton:disabled {
     background: #c8c8c8;
     color: #f0f0f0;
-    box-shadow: none;
+    /* Удаляем свойство box-shadow */
 }
 
 QLabel {
@@ -163,7 +163,7 @@ QFrame.styled {
     border-radius: 12px;
     margin: 8px;
     padding: 15px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border: 1px solid #eaeefa;  /* Заменяем box-shadow на обычную границу */
 }
 
 QLabel#stepLabel {
