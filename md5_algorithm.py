@@ -4,6 +4,12 @@ import binascii
 def text_to_bytearray(text: str) -> bytes:
     """
     Преобразует текст в байтовый массив.
+    
+    Args:
+        text: Входная строка текста.
+        
+    Returns:
+        bytes: Байтовый массив, представляющий входной текст в кодировке UTF-8.
     """
     return text.encode('utf-8')
 
@@ -11,6 +17,16 @@ def bytearray_visualize_with_chars(byte_data: bytes) -> str:
     """
     Визуализирует байтовый массив с отображением символов.
     Используется для первого шага алгоритма.
+    
+    Функция создаёт строковое представление байтового массива, 
+    отображая как шестнадцатеричные значения, так и соответствующие им 
+    символы в кодировке UTF-8, если они являются отображаемыми.
+    
+    Args:
+        byte_data: Байтовый массив для визуализации.
+        
+    Returns:
+        str: Строковое представление байтового массива с отображением символов.
     """
     hex_line = binascii.hexlify(byte_data, sep='-').decode('utf-8')
     hex_values = hex_line.split('-')
@@ -63,6 +79,15 @@ def bytearray_visualize_simple(byte_data: bytes) -> str:
     """
     Простая визуализация байтового массива без отображения символов.
     Используется для второго шага алгоритма и далее.
+    
+    Функция преобразует байтовый массив в строку шестнадцатеричных значений,
+    разделённых дефисами.
+    
+    Args:
+        byte_data: Байтовый массив для визуализации.
+        
+    Returns:
+        str: Строка шестнадцатеричных значений, разделённых дефисами.
     """
     hex_line = binascii.hexlify(byte_data, sep='-').decode('utf-8')
     return hex_line
@@ -70,6 +95,18 @@ def bytearray_visualize_simple(byte_data: bytes) -> str:
 def add_padding(byte_data: bytes) -> bytearray:
     """
     Добавляет padding к байтовому массиву для MD5.
+    
+    В алгоритме MD5 исходное сообщение дополняется до размера, кратного 512 битам (64 байтам).
+    Дополнение происходит следующим образом:
+    1. Добавляется бит 1 (байт 0x80)
+    2. Добавляются биты 0 до получения длины (размер_сообщения_в_битах + 64) % 512 = 448
+    3. Добавляется 64-битное представление исходной длины сообщения в битах
+    
+    Args:
+        byte_data: Исходный байтовый массив.
+        
+    Returns:
+        bytearray: Байтовый массив с добавленным padding'ом.
     """
     original_length_bits = len(byte_data) * 8
     padded_data = bytearray(byte_data)
@@ -80,18 +117,75 @@ def add_padding(byte_data: bytes) -> bytearray:
     return padded_data
 
 def F(x, y, z):
+    """
+    Функция F используется в первом раунде алгоритма MD5.
+    
+    Реализует булеву функцию (x AND y) OR ((NOT x) AND z),
+    которая выбирает между y и z в зависимости от x.
+    
+    Args:
+        x, y, z: 32-битные целые числа.
+        
+    Returns:
+        int: Результат применения функции F.
+    """
     return (x & y) | (~x & z)
 
 def G(x, y, z):
+    """
+    Функция G используется во втором раунде алгоритма MD5.
+    
+    Реализует булеву функцию (x AND z) OR (y AND (NOT z)),
+    которая выбирает между x и y в зависимости от z.
+    
+    Args:
+        x, y, z: 32-битные целые числа.
+        
+    Returns:
+        int: Результат применения функции G.
+    """
     return (x & z) | (y & ~z)
 
 def H(x, y, z):
+    """
+    Функция H используется в третьем раунде алгоритма MD5.
+    
+    Реализует булеву функцию x XOR y XOR z,
+    которая вычисляет бит чётности (XOR) для каждой тройки битов.
+    
+    Args:
+        x, y, z: 32-битные целые числа.
+        
+    Returns:
+        int: Результат применения функции H.
+    """
     return x ^ y ^ z
 
 def I(x, y, z):
+    """
+    Функция I используется в четвёртом раунде алгоритма MD5.
+    
+    Реализует булеву функцию y XOR (x OR (NOT z)),
+    которая является нелинейной функцией от всех трёх аргументов.
+    
+    Args:
+        x, y, z: 32-битные целые числа.
+        
+    Returns:
+        int: Результат применения функции I.
+    """
     return y ^ (x | ~z)
 
 def buffer_init():
+    """
+    Инициализирует буферы MD5 начальными значениями.
+    
+    В алгоритме MD5 используются четыре 32-битных буфера (A, B, C, D),
+    которые инициализируются фиксированными константами.
+    
+    Returns:
+        list: Список из четырёх 32-битных целых чисел, представляющих начальные значения буферов.
+    """
     return [
         0x67452301,  # A
         0xEFCDAB89,  # B
@@ -100,6 +194,16 @@ def buffer_init():
     ]
 
 def left_rotate(x, c):
+    """
+    Выполняет циклический сдвиг влево 32-битного числа.
+    
+    Args:
+        x: 32-битное целое число.
+        c: Количество битов для сдвига.
+        
+    Returns:
+        int: Результат циклического сдвига влево.
+    """
     return ((x << c) | (x >> (32 - c))) & 0xFFFFFFFF
 
 T = [int((2 ** 32) * abs(math.sin(i + 1))) & 0xFFFFFFFF for i in range(64)]
@@ -114,7 +218,17 @@ S = [
 def md5_process_block(block, buffers):
     """
     Обрабатывает один 512-битный блок данных.
-    Возвращает обновленные значения буферов.
+    
+    Функция реализует основной цикл алгоритма MD5, который состоит из 64 шагов,
+    разделённых на 4 раунда по 16 шагов. На каждом шаге используются различные 
+    нелинейные функции (F, G, H, I) и выполняются операции над буферами.
+    
+    Args:
+        block: 64-байтный блок данных для обработки.
+        buffers: Текущие значения буферов MD5 [A, B, C, D].
+        
+    Returns:
+        list: Обновленные значения буферов.
     """
     M = [int.from_bytes(block[i:i + 4], byteorder='little') for i in range(0, 64, 4)]
     A, B, C, D = buffers
@@ -144,7 +258,19 @@ def md5_process_block(block, buffers):
     return buffers
 
 def md5_process_block_with_details(block, buffers):
-    """Обрабатывает блок с подробной визуализацией."""
+    """
+    Обрабатывает блок с подробной визуализацией.
+    
+    Аналогичен функции md5_process_block, но дополнительно сохраняет
+    подробную информацию о каждом шаге алгоритма для визуализации.
+    
+    Args:
+        block: 64-байтный блок данных для обработки.
+        buffers: Текущие значения буферов MD5 [A, B, C, D].
+        
+    Returns:
+        tuple: Кортеж (обновленные буферы, данные о выполненных шагах).
+    """
     M = [int.from_bytes(block[i:i + 4], byteorder='little') for i in range(0, 64, 4)]
     A, B, C, D = buffers
     original_buffers = buffers.copy()
@@ -199,7 +325,16 @@ def md5_process_block_with_details(block, buffers):
 def process_blocks(data: bytes, buffers):
     """
     Обрабатывает все блоки данных.
-    Возвращает финальные значения буферов.
+    
+    Разделяет входные данные на блоки по 64 байта и последовательно 
+    обрабатывает их с помощью функции md5_process_block.
+    
+    Args:
+        data: Байтовый массив данных для обработки.
+        buffers: Начальные значения буферов MD5 [A, B, C, D].
+        
+    Returns:
+        list: Финальные значения буферов.
     """
     for i in range(0, len(data), 64):
         block = data[i:i + 64]
@@ -207,7 +342,23 @@ def process_blocks(data: bytes, buffers):
     return buffers
 
 def process_blocks_with_detailed_visualization(data: bytes, buffers, callback=None):
-    """Обрабатывает блоки с подробной визуализацией."""
+    """
+    Обрабатывает блоки с подробной визуализацией.
+    
+    Функция разделяет входные данные на блоки по 64 байта и обрабатывает их,
+    сохраняя подробную информацию о каждом шаге алгоритма для визуализации.
+    При наличии callback-функции вызывает её после обработки каждого блока.
+    
+    Args:
+        data: Байтовый массив данных для обработки.
+        buffers: Начальные значения буферов MD5 [A, B, C, D].
+        callback: Функция обратного вызова, которая принимает номер блока,
+                 его шестнадцатеричное представление, данные о раундах и
+                 обновлённые буферы.
+        
+    Returns:
+        list: Финальные значения буферов.
+    """
     for i in range(0, len(data), 64):
         block = data[i:i + 64]
         block_hex = bytearray_visualize_simple(block)
@@ -221,12 +372,34 @@ def process_blocks_with_detailed_visualization(data: bytes, buffers, callback=No
 def finalize_hash(buffers):
     """
     Преобразует финальные значения буферов в MD5 хеш.
+    
+    Конкатенирует четыре 32-битных буфера в порядке little-endian
+    и представляет результат в виде шестнадцатеричной строки.
+    
+    Args:
+        buffers: Список из четырёх 32-битных буферов [A, B, C, D].
+        
+    Returns:
+        str: Строка, представляющая 128-битный MD5 хеш.
     """
     return ''.join(buffer.to_bytes(4, byteorder='little').hex() for buffer in buffers)
 
 def calculate_md5(text: str) -> str:
     """
     Вычисляет MD5 хеш для входного текста.
+    
+    Выполняет полный процесс вычисления MD5-хеша:
+    1. Преобразует текст в байтовый массив
+    2. Добавляет padding
+    3. Инициализирует буферы
+    4. Обрабатывает все блоки данных
+    5. Формирует финальный хеш
+    
+    Args:
+        text: Входная строка текста.
+        
+    Returns:
+        str: 32-символьная строка, представляющая MD5 хеш.
     """
     byte_data = text_to_bytearray(text)
     padded_data = add_padding(byte_data)
@@ -235,7 +408,19 @@ def calculate_md5(text: str) -> str:
     return finalize_hash(final_buffers)
 
 def visualize_padding(original: bytes, padded: bytearray) -> str:
-    """Visualizes the padding process."""
+    """
+    Визуализирует процесс добавления padding.
+    
+    Создаёт строковое представление, показывающее исходные данные,
+    добавленный padding и байты длины сообщения.
+    
+    Args:
+        original: Исходный байтовый массив до добавления padding.
+        padded: Байтовый массив после добавления padding.
+        
+    Returns:
+        str: Строковое представление процесса добавления padding.
+    """
     original_hex = bytearray_visualize_simple(original)
     
     # Вычисляем границы для padding и длины сообщения
@@ -257,7 +442,21 @@ def visualize_padding(original: bytes, padded: bytearray) -> str:
             f"Длина сообщения (8 байт):\n{length_hex}")
 
 def visualize_block_process(block_number: int, block: bytes, buffers_before: list, buffers_after: list) -> str:
-    """Visualizes the processing of one block."""
+    """
+    Визуализирует обработку одного блока данных.
+    
+    Создаёт строковое представление, показывающее данные блока,
+    значения буферов до и после его обработки.
+    
+    Args:
+        block_number: Номер блока.
+        block: Байтовый массив, представляющий блок данных.
+        buffers_before: Значения буферов до обработки блока.
+        buffers_after: Значения буферов после обработки блока.
+        
+    Returns:
+        str: Строковое представление обработки блока.
+    """
     block_hex = bytearray_visualize_simple(block)
     before = [f"{b:08x}" for b in buffers_before]
     after = [f"{b:08x}" for b in buffers_after]
@@ -266,7 +465,21 @@ def visualize_block_process(block_number: int, block: bytes, buffers_before: lis
             f"Буферы после:\nA: {after[0]}\nB: {after[1]}\nC: {after[2]}\nD: {after[3]}")
 
 def process_blocks_with_visualization(data: bytes, buffers, callback=None):
-    """Process blocks with visualization callback."""
+    """
+    Обрабатывает блоки с простой визуализацией.
+    
+    Разделяет входные данные на блоки по 64 байта, обрабатывает их
+    и при наличии callback-функции вызывает её с информацией о каждом блоке.
+    
+    Args:
+        data: Байтовый массив данных для обработки.
+        buffers: Начальные значения буферов MD5 [A, B, C, D].
+        callback: Функция обратного вызова, которая принимает строку
+                 с визуализацией обработки блока.
+        
+    Returns:
+        list: Финальные значения буферов.
+    """
     for i in range(0, len(data), 64):
         block = data[i:i + 64]
         buffers_before = buffers.copy()

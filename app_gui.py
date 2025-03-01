@@ -32,6 +32,11 @@ from md5_algorithm import (
 )
 
 class AboutDialog(QDialog):
+    """
+    Диалоговое окно "О программе".
+    
+    Отображает информацию о приложении, версии и авторских правах.
+    """
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("О программе")
@@ -65,6 +70,12 @@ class AboutDialog(QDialog):
         layout.addWidget(close_button)
 
 class HelpDialog(QDialog):
+    """
+    Диалоговое окно справки.
+    
+    Содержит подробное руководство пользователя по использованию
+    визуализатора MD5 и описание этапов алгоритма MD5.
+    """
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Справка")
@@ -82,26 +93,48 @@ class HelpDialog(QDialog):
         help_text.setHtml("""
             <h2>Как использовать визуализатор MD5</h2>
             <ol>
-                <li><b>Введите текст</b> в поле ввода.</li>
-                <li>Нажмите кнопку <b>Вычислить хеш</b>.</li>
-                <li>Используйте кнопки <b>Предыдущий шаг</b> и <b>Следующий шаг</b> для навигации по этапам алгоритма.</li>
-                <li>Для сброса визуализации нажмите кнопку <b>Сбросить</b>.</li>
+            <li><b>Введите текст</b> в поле ввода.</li>
+            <li>Нажмите кнопку <b>Вычислить хеш</b>.</li>
+            <li>Используйте кнопки <b>Предыдущий шаг</b> и <b>Следующий шаг</b> для навигации по этапам алгоритма.</li>
+            <li>Для сброса визуализации нажмите кнопку <b>Сбросить</b>.</li>
             </ol>
             
             <h3>Сохранение результатов:</h3>
             <p>В меню <b>Файл</b> вы можете:</p>
             <ul>
-                <li>Сохранить текущий шаг в файл</li>
-                <li>Скопировать в буфер обмена</li>
+            <li>Сохранить текущий шаг в файл</li>
+            <li>Скопировать в буфер обмена</li>
             </ul>
             
             <h3>Этапы алгоритма MD5:</h3>
             <ol>
-                <li><b>Преобразование текста в байты</b> - исходный текст преобразуется в последовательность байтов.</li>
-                <li><b>Добавление padding</b> - дополнение данных до размера, кратного 512 битам.</li>
-                <li><b>Инициализация буферов</b> - инициализация четырех 32-битных регистров A, B, C и D.</li>
-                <li><b>Обработка блоков</b> - последовательная обработка 512-битных блоков данных.</li>
-                <li><b>Финальный хеш</b> - формирование 128-битного хеш-значения из буферов.</li>
+            <li><b>Преобразование текста в байты</b> - исходный текст преобразуется в последовательность байтов.</li>
+            <li><b>Добавление padding</b> - дополнение данных до размера, кратного 512 битам.</li>
+            <li><b>Инициализация буферов</b> - инициализация четырех 32-битных регистров A, B, C и D.</li>
+            <li><b>Обработка блоков</b> - последовательная обработка 512-битных блоков данных:
+                <ul>
+                <li>Каждый блок из 512 бит разбивается на 16 слов по 32 бита</li>
+                <li>Выполняется 4 раунда по 16 шагов каждый (всего 64 операции)</li>
+                <li>В каждом раунде используется своя нелинейная функция:
+                    <ul>
+                    <li><b>Раунд 1 (F):</b> F(B,C,D) = (B ∧ C) ∨ (¬B ∧ D) - выбор между C и D в зависимости от B</li>
+                    <li><b>Раунд 2 (G):</b> G(B,C,D) = (B ∧ D) ∨ (C ∧ ¬D) - выбор между B и C в зависимости от D</li>
+                    <li><b>Раунд 3 (H):</b> H(B,C,D) = B ⊕ C ⊕ D - битовое XOR (исключающее ИЛИ)</li>
+                    <li><b>Раунд 4 (I):</b> I(B,C,D) = C ⊕ (B ∨ ¬D) - нелинейная функция</li>
+                    </ul>
+                </li>
+                <li>Каждый шаг включает в себя:
+                    <ul>
+                    <li>Применение соответствующей функции (F, G, H или I)</li>
+                    <li>Сложение результата с текущим элементом данных и константой</li>
+                    <li>Циклический сдвиг влево</li>
+                    <li>Сложение с другим буфером</li>
+                    </ul>
+                </li>
+                <li>После каждого блока обновляются четыре буфера (A, B, C, D)</li>
+                </ul>
+            </li>
+            <li><b>Финальный хеш</b> - формирование 128-битного хеш-значения из буферов.</li>
             </ol>
         """)
         
@@ -113,6 +146,16 @@ class HelpDialog(QDialog):
         layout.addWidget(close_button)
 
 class StyledFrame(QFrame):
+    """
+    Стилизованный фрейм с заголовком.
+    
+    Создает контейнер с рамкой, заголовком и внутренним отступом
+    для группировки связанных элементов интерфейса.
+    
+    Args:
+        title: Заголовок фрейма.
+        parent: Родительский виджет.
+    """
     def __init__(self, title="", parent=None):
         super().__init__(parent)
         self.setObjectName("styled")
@@ -126,7 +169,16 @@ class StyledFrame(QFrame):
             self.layout.addWidget(title_label)
 
 class CollapsibleSection(QWidget):
-    """Реализация раскрывающегося (drop-down) виджета"""
+    """
+    Реализация раскрывающегося (drop-down) виджета.
+    
+    Создает виджет с кнопкой, при клике на которую отображается или
+    скрывается содержимое секции с анимацией.
+    
+    Args:
+        title: Заголовок секции.
+        parent: Родительский виджет.
+    """
     
     def __init__(self, title="", parent=None):
         super().__init__(parent)
@@ -194,18 +246,34 @@ class CollapsibleSection(QWidget):
         self.toggle_animation.addAnimation(self.animation)
         
     def add_content(self, widget):
-        """Добавляет виджет в содержимое секции"""
+        """
+        Добавляет виджет в содержимое секции.
+        
+        Args:
+            widget: Виджет для добавления в содержимое.
+        """
         self.content_layout.addWidget(widget)
         
     def toggle_content(self, checked):
-        """Показывает/скрывает содержимое секции"""
+        """
+        Показывает/скрывает содержимое секции.
+        
+        Вызывается при нажатии на кнопку раскрытия секции.
+        
+        Args:
+            checked: Флаг, указывающий на новое состояние кнопки.
+        """
         if checked:
             self.show_content()
         else:
             self.hide_content()
     
     def show_content(self):
-        """Показывает содержимое"""
+        """
+        Показывает содержимое секции с анимацией.
+        
+        Анимирует раскрытие содержимого и устанавливает кнопку в нажатое состояние.
+        """
         content_height = self.content_widget.sizeHint().height()
         self.animation.setEndValue(content_height)
         self.toggle_animation.setDirection(QAbstractAnimation.Direction.Forward)
@@ -213,20 +281,38 @@ class CollapsibleSection(QWidget):
         self.toggle_button.setChecked(True)
     
     def hide_content(self):
-        """Скрывает содержимое"""
+        """
+        Скрывает содержимое секции с анимацией.
+        
+        Анимирует сворачивание содержимого и сбрасывает состояние кнопки.
+        """
         self.animation.setEndValue(0)
         self.toggle_animation.setDirection(QAbstractAnimation.Direction.Backward)
         self.toggle_animation.start()
         self.toggle_button.setChecked(False)
         
     def add_text(self, text):
-        """Добавляет текстовую метку в содержимое"""
+        """
+        Добавляет текстовую метку в содержимое.
+        
+        Создает QLabel с указанным текстом, настраивает перенос слов и шрифт,
+        и добавляет его в содержимое секции.
+        
+        Args:
+            text: Текст для отображения.
+        """
         label = QLabel(text)
         label.setWordWrap(True)
         label.setFont(QFont("Consolas", 11))
         self.add_content(label)
 
 class MD5VisualizerWindow(QMainWindow):
+    """
+    Главное окно приложения визуализатора MD5.
+    
+    Предоставляет интерфейс для ввода текста, вычисления MD5-хеша
+    и пошаговой визуализации алгоритма.
+    """
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Визуализация алгоритма хеширования MD5")
@@ -234,6 +320,12 @@ class MD5VisualizerWindow(QMainWindow):
         self.setupUI()
 
     def setupUI(self):
+        """
+        Настраивает пользовательский интерфейс главного окна.
+        
+        Создает меню, поля ввода, кнопки и область визуализации.
+        Инициализирует отслеживание шагов визуализации.
+        """
         # Create menu bar
         menubar = self.menuBar()
         
@@ -380,6 +472,12 @@ class MD5VisualizerWindow(QMainWindow):
         self.update_navigation_buttons()
 
     def update_navigation_buttons(self):
+        """
+        Обновляет состояние кнопок навигации.
+        
+        Показывает или скрывает кнопки "Предыдущий шаг" и "Следующий шаг"
+        в зависимости от текущего шага визуализации.
+        """
         if not self.steps:
             self.prev_button.hide()
             self.next_button.hide()
@@ -394,19 +492,38 @@ class MD5VisualizerWindow(QMainWindow):
         self.step_label.setText(f"Шаг {self.current_step + 1}/{len(self.steps)}")
 
     def show_previous_step(self):
+        """
+        Переходит к предыдущему шагу визуализации.
+        
+        Уменьшает счетчик текущего шага, отображает соответствующие данные
+        и обновляет состояние кнопок навигации.
+        """
         if self.current_step > 0:
             self.current_step -= 1
             self.display_current_step()
             self.update_navigation_buttons()
 
     def show_next_step(self):
+        """
+        Переходит к следующему шагу визуализации.
+        
+        Увеличивает счетчик текущего шага, отображает соответствующие данные
+        и обновляет состояние кнопок навигации.
+        """
         if self.current_step < len(self.steps) - 1:
             self.current_step += 1
             self.display_current_step()
             self.update_navigation_buttons()
             
     def display_current_step(self):
-        """Отображает текущий шаг визуализации"""
+        """
+        Отображает текущий шаг визуализации.
+        
+        Анализирует тип данных текущего шага и отображает их соответствующим образом:
+        - Текстовые данные отображаются в виде текста
+        - Структурированные данные о раундах и блоках отображаются
+          с использованием раскрывающихся секций
+        """
         if not self.steps:
             return
             
@@ -504,13 +621,37 @@ class MD5VisualizerWindow(QMainWindow):
             self.rounds_container.hide()
 
     def store_step(self, text):
+        """
+        Сохраняет текстовый шаг визуализации.
+        
+        Args:
+            text: Текстовое представление шага визуализации.
+        """
         self.steps.append(f"{text}\n")
         
     def store_structured_step(self, step_data):
-        """Сохраняет структурированный шаг для визуализации раундов"""
+        """
+        Сохраняет структурированный шаг для визуализации раундов.
+        
+        Args:
+            step_data: Словарь с данными о блоках и раундах.
+        """
         self.steps.append(step_data)
 
     def calculate_md5(self):
+        """
+        Вычисляет MD5-хеш и создает пошаговую визуализацию.
+        
+        Берет текст из поля ввода, выполняет последовательные шаги алгоритма MD5
+        и создает визуализацию каждого шага:
+        1. Преобразование текста в байты
+        2. Добавление padding
+        3. Инициализация буферов
+        4. Обработка блоков
+        5. Формирование финального хеша
+        
+        Отображает прогресс выполнения с помощью прогресс-бара.
+        """
         self.visualization.clear()
         self.steps = []
         self.current_step = 0
@@ -666,7 +807,12 @@ class MD5VisualizerWindow(QMainWindow):
             traceback.print_exc()
     
     def reset_visualization(self):
-        """Сброс визуализации и очистка интерфейса"""
+        """
+        Сброс визуализации и очистка интерфейса.
+        
+        Очищает поле ввода, список шагов визуализации и сбрасывает
+        счетчик текущего шага.
+        """
         self.visualization.clear()
         self.input_field.clear()
         self.steps = []
@@ -674,7 +820,12 @@ class MD5VisualizerWindow(QMainWindow):
         self.update_navigation_buttons()
     
     def save_to_file(self):
-        """Сохраняет текущий шаг визуализации в файл"""
+        """
+        Сохраняет текущий шаг визуализации в файл.
+        
+        Предлагает пользователю выбрать файл для сохранения и записывает
+        в него текущий шаг визуализации.
+        """
         if not self.steps or self.current_step >= len(self.steps):
             QMessageBox.information(self, "Информация", "Нет данных для сохранения.")
             return
@@ -695,7 +846,12 @@ class MD5VisualizerWindow(QMainWindow):
                 QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить файл:\n{str(e)}")
     
     def copy_to_clipboard(self):
-        """Копирует текущий шаг визуализации в буфер обмена"""
+        """
+        Копирует текущий шаг визуализации в буфер обмена.
+        
+        Позволяет пользователю скопировать данные для использования
+        в других приложениях.
+        """
         if not self.steps or self.current_step >= len(self.steps):
             QMessageBox.information(self, "Информация", "Нет данных для копирования.")
             return
@@ -705,16 +861,30 @@ class MD5VisualizerWindow(QMainWindow):
         QMessageBox.information(self, "Успех", "Данные скопированы в буфер обмена.")
     
     def show_about_dialog(self):
-        """Отображает диалог с информацией о программе"""
+        """
+        Отображает диалог с информацией о программе.
+        
+        Создаёт и показывает экземпляр диалога AboutDialog.
+        """
         dialog = AboutDialog(self)
         dialog.exec()
     
     def show_help_dialog(self):
-        """Отображает диалог со справочной информацией"""
+        """
+        Отображает диалог со справочной информацией.
+        
+        Создаёт и показывает экземпляр диалога HelpDialog.
+        """
         dialog = HelpDialog(self)
         dialog.exec()
 
 def main():
+    """
+    Главная функция приложения.
+    
+    Инициализирует приложение Qt, применяет стили и запускает
+    главное окно визуализатора MD5.
+    """
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
     
