@@ -149,12 +149,16 @@ def md5_process_block_with_details(block, buffers):
     A, B, C, D = buffers
     original_buffers = buffers.copy()
     
-    details = []
-    details.append("Исходные значения буферов:")
-    details.append(f"A = {A:#010x}, B = {B:#010x}, C = {C:#010x}, D = {D:#010x}\n")
+    rounds_data = []
+    
+    # Заголовок для информации о блоке
+    rounds_data.append(f"Исходные значения буферов:")
+    rounds_data.append(f"A = {A:#010x}, B = {B:#010x}, C = {C:#010x}, D = {D:#010x}\n")
 
     for round_index, func in enumerate([F, G, H, I]):
-        details.append(f"=== Раунд {round_index + 1} ===")
+        # Добавляем заголовок раунда (будет использоваться для разделения раундов)
+        rounds_data.append(f"=== Раунд {round_index + 1} ===")
+        
         for i in range(16):
             step = round_index * 16 + i
             if round_index == 0:
@@ -167,14 +171,18 @@ def md5_process_block_with_details(block, buffers):
                 k = (7 * i) % 16
 
             s = S[round_index][i % 4]
+            
+            # Сохраняем состояние до изменений для визуализации
+            old_A, old_B, old_C, old_D = A, B, C, D
+            
             temp = (A + func(B, C, D) + M[k] + T[step]) & 0xFFFFFFFF
             new_A = (B + left_rotate(temp, s)) & 0xFFFFFFFF
 
-            details.append(f"Шаг {step + 1}:")
-            details.append(f"Функция: {func.__name__}")
-            details.append(f"M[{k}] = {M[k]:#010x}, T[{step}] = {T[step]:#010x}, S = {s}")
-            details.append(f"До: A = {A:#010x}, B = {B:#010x}, C = {C:#010x}, D = {D:#010x}")
-            details.append(f"После: A = {new_A:#010x}\n")
+            rounds_data.append(f"Шаг {i + 1}:")
+            rounds_data.append(f"Функция: {func.__name__}")
+            rounds_data.append(f"M[{k}] = {M[k]:#010x}, T[{step}] = {T[step]:#010x}, S = {s}")
+            rounds_data.append(f"До: A = {old_A:#010x}, B = {old_B:#010x}, C = {old_C:#010x}, D = {old_D:#010x}")
+            rounds_data.append(f"После: A = {D:#010x}, B = {new_A:#010x}, C = {B:#010x}, D = {C:#010x}\n")
 
             A, D, C, B = D, C, B, new_A
 
@@ -183,10 +191,10 @@ def md5_process_block_with_details(block, buffers):
     buffers[2] = (buffers[2] + C) & 0xFFFFFFFF
     buffers[3] = (buffers[3] + D) & 0xFFFFFFFF
 
-    details.append("Финальные значения буферов:")
-    details.append(f"A = {buffers[0]:#010x}, B = {buffers[1]:#010x}, C = {buffers[2]:#010x}, D = {buffers[3]:#010x}")
+    rounds_data.append("\nФинальные значения буферов:")
+    rounds_data.append(f"A = {buffers[0]:#010x}, B = {buffers[1]:#010x}, C = {buffers[2]:#010x}, D = {buffers[3]:#010x}")
     
-    return buffers, '\n'.join(details)
+    return buffers, rounds_data
 
 def process_blocks(data: bytes, buffers):
     """
@@ -203,12 +211,11 @@ def process_blocks_with_detailed_visualization(data: bytes, buffers, callback=No
     for i in range(0, len(data), 64):
         block = data[i:i + 64]
         block_hex = bytearray_visualize_simple(block)
-        details = f"\n=== Обработка блока {i//64 + 1} ===\n"
-        details += f"Данные блока:\n{block_hex}\n"
         
-        buffers, block_details = md5_process_block_with_details(block, buffers)
+        buffers, rounds_data = md5_process_block_with_details(block, buffers)
         if callback:
-            callback(details + block_details)
+            callback(i // 64, block_hex, rounds_data, buffers.copy())
+    
     return buffers
 
 def finalize_hash(buffers):

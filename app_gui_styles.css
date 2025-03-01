@@ -207,3 +207,46 @@ QListWidget::item {
 QListWidget::item:hover {
     background: #f1f2f6;
 }
+
+/* Стили для выпадающих блоков */
+QWidget#collapsible_button {
+    text-align: left;
+    padding: 10px;
+    font-weight: bold;
+    border-radius: 5px;
+    background-color: #eaeefa;
+    border: none;
+    color: #2c3e50;
+}
+
+QWidget#collapsible_button:hover {
+    background-color: #d0d4f7;
+}
+
+QWidget#collapsible_button:checked {
+    background-color: #7158e2;
+    color: white;
+}
+
+QWidget#collapsible_content {
+    background-color: white;
+    border-radius: 5px;
+    border: 1px solid #eaeefa;
+    margin: 0px 5px 5px 5px;
+}
+
+/* Стили для прогресс-бара */
+QProgressBar {
+    border: 1px solid #eaeefa;
+    border-radius: 7px;
+    background: white;
+    padding: 1px;
+    text-align: center;
+    margin: 10px 0px;
+    height: 20px;
+}
+
+QProgressBar::chunk {
+    background-color: #7158e2;
+    border-radius: 5px;
+}

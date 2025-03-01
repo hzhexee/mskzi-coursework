@@ -17,8 +17,9 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QFileDialog,
     QDialog,
-    QSizePolicy)
-from PyQt6.QtCore import Qt, QSize
+    QSizePolicy,
+    QProgressBar)
+from PyQt6.QtCore import Qt, QSize, QParallelAnimationGroup, QPropertyAnimation, QAbstractAnimation
 from PyQt6.QtGui import QAction, QFont, QIcon, QPixmap, QClipboard
 from md5_algorithm import (
     text_to_bytearray,
@@ -124,6 +125,107 @@ class StyledFrame(QFrame):
             title_label.setObjectName("title")
             self.layout.addWidget(title_label)
 
+class CollapsibleSection(QWidget):
+    """Реализация раскрывающегося (drop-down) виджета"""
+    
+    def __init__(self, title="", parent=None):
+        super().__init__(parent)
+        
+        self.animation_duration = 300
+        self.toggle_animation = QParallelAnimationGroup(self)
+        
+        # Основной layout
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(0)
+        
+        # Заголовок (кнопка для раскрытия/скрытия)
+        self.toggle_button = QPushButton(title)
+        self.toggle_button.setObjectName("collapsible_button")
+        self.toggle_button.setCheckable(True)
+        self.toggle_button.setChecked(False)
+        self.toggle_button.clicked.connect(self.toggle_content)
+        
+        # Иконка для кнопки
+        self.toggle_button.setStyleSheet("""
+            QPushButton#collapsible_button {
+                text-align: left;
+                padding: 10px;
+                font-weight: bold;
+                border-radius: 5px;
+                background-color: #eaeefa;
+                border: none;
+                color: #2c3e50;
+            }
+            QPushButton#collapsible_button:hover {
+                background-color: #d0d4f7;
+            }
+            QPushButton#collapsible_button:checked {
+                background-color: #7158e2;
+                color: white;
+            }
+        """)
+        
+        # Контейнер для содержимого
+        self.content_area = QScrollArea()
+        self.content_area.setObjectName("collapsible_content")
+        self.content_area.setMaximumHeight(0)
+        self.content_area.setMinimumHeight(0)
+        self.content_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.content_area.setFrameShape(QFrame.Shape.NoFrame)
+        self.content_area.setWidgetResizable(True)
+        
+        # Виджет для содержимого
+        self.content_widget = QWidget()
+        self.content_layout = QVBoxLayout(self.content_widget)
+        self.content_layout.setContentsMargins(15, 15, 15, 15)
+        self.content_layout.setSpacing(10)
+        
+        self.content_area.setWidget(self.content_widget)
+        
+        # Добавляем компоненты в основной layout
+        self.main_layout.addWidget(self.toggle_button)
+        self.main_layout.addWidget(self.content_area)
+        
+        # Animation setup
+        self.animation = QPropertyAnimation(self.content_area, b"maximumHeight")
+        self.animation.setDuration(self.animation_duration)
+        self.animation.setStartValue(0)
+        self.toggle_animation.addAnimation(self.animation)
+        
+    def add_content(self, widget):
+        """Добавляет виджет в содержимое секции"""
+        self.content_layout.addWidget(widget)
+        
+    def toggle_content(self, checked):
+        """Показывает/скрывает содержимое секции"""
+        if checked:
+            self.show_content()
+        else:
+            self.hide_content()
+    
+    def show_content(self):
+        """Показывает содержимое"""
+        content_height = self.content_widget.sizeHint().height()
+        self.animation.setEndValue(content_height)
+        self.toggle_animation.setDirection(QAbstractAnimation.Direction.Forward)
+        self.toggle_animation.start()
+        self.toggle_button.setChecked(True)
+    
+    def hide_content(self):
+        """Скрывает содержимое"""
+        self.animation.setEndValue(0)
+        self.toggle_animation.setDirection(QAbstractAnimation.Direction.Backward)
+        self.toggle_animation.start()
+        self.toggle_button.setChecked(False)
+        
+    def add_text(self, text):
+        """Добавляет текстовую метку в содержимое"""
+        label = QLabel(text)
+        label.setWordWrap(True)
+        label.setFont(QFont("Consolas", 11))
+        self.add_content(label)
+
 class MD5VisualizerWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -223,6 +325,15 @@ class MD5VisualizerWindow(QMainWindow):
         
         viz_frame.layout.addLayout(nav_layout)
         
+        # Прогресс-бар для отображения процесса вычисления
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setMaximum(100)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setTextVisible(True)
+        self.progress_bar.setFormat("%p% завершено")
+        self.progress_bar.hide()
+        viz_frame.layout.addWidget(self.progress_bar)
+        
         # Создаем область прокрутки
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
@@ -230,9 +341,10 @@ class MD5VisualizerWindow(QMainWindow):
         
         # Создаем контейнер для содержимого
         content_widget = QWidget()
-        content_layout = QVBoxLayout(content_widget)
+        self.content_layout = QVBoxLayout(content_widget)
+        self.content_layout.setSpacing(15)
         
-        # Заменяем QTextEdit на QLabel
+        # Виджет для текстовой визуализации
         self.visualization = QLabel()
         self.visualization.setWordWrap(True)
         self.visualization.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
@@ -245,8 +357,16 @@ class MD5VisualizerWindow(QMainWindow):
             color: #333333;
         """)
         
-        content_layout.addWidget(self.visualization)
-        content_layout.addStretch()  # Добавляем растяжку снизу
+        # Контейнер для блоков раундов (создается динамически)
+        self.rounds_container = QWidget()
+        self.rounds_layout = QVBoxLayout(self.rounds_container)
+        self.rounds_layout.setContentsMargins(0, 0, 0, 0)
+        self.rounds_layout.setSpacing(10)
+        self.rounds_container.hide()
+        
+        self.content_layout.addWidget(self.visualization)
+        self.content_layout.addWidget(self.rounds_container)
+        self.content_layout.addStretch()  # Добавляем растяжку снизу
         
         scroll_area.setWidget(content_widget)
         viz_frame.layout.addWidget(scroll_area)
@@ -256,6 +376,7 @@ class MD5VisualizerWindow(QMainWindow):
         # Initialize step tracking
         self.current_step = 0
         self.steps = []
+        self.collapsible_sections = []
         self.update_navigation_buttons()
 
     def update_navigation_buttons(self):
@@ -275,17 +396,119 @@ class MD5VisualizerWindow(QMainWindow):
     def show_previous_step(self):
         if self.current_step > 0:
             self.current_step -= 1
-            self.visualization.setText(self.steps[self.current_step])
+            self.display_current_step()
             self.update_navigation_buttons()
 
     def show_next_step(self):
         if self.current_step < len(self.steps) - 1:
             self.current_step += 1
-            self.visualization.setText(self.steps[self.current_step])
+            self.display_current_step()
             self.update_navigation_buttons()
+            
+    def display_current_step(self):
+        """Отображает текущий шаг визуализации"""
+        if not self.steps:
+            return
+            
+        step_data = self.steps[self.current_step]
+        
+        # Проверяем тип данных шага
+        if isinstance(step_data, str):
+            # Обычный текстовый шаг
+            self.visualization.setText(step_data)
+            self.visualization.show()
+            self.rounds_container.hide()
+        elif isinstance(step_data, dict) and step_data.get('type') == 'rounds':
+            # Структурированные данные для шага 4 (обработка блоков)
+            self.visualization.hide()
+            self.rounds_container.show()
+            
+            # Очищаем предыдущие секции
+            for section in self.collapsible_sections:
+                self.rounds_layout.removeWidget(section)
+                section.deleteLater()
+            self.collapsible_sections.clear()
+            
+            # Добавляем заголовок для шага 4
+            step_title = QLabel("Шаг 4: Обработка блоков данных")
+            step_title.setObjectName("title")
+            step_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.rounds_layout.addWidget(step_title)
+            
+            # Добавляем начальные значения буферов (перед всеми блоками)
+            if step_data.get('initial_buffers'):
+                buffers_label = QLabel(f"Исходные значения буферов:\n"
+                                     f"A = {step_data['initial_buffers'][0]:#010x}, "
+                                     f"B = {step_data['initial_buffers'][1]:#010x}, "
+                                     f"C = {step_data['initial_buffers'][2]:#010x}, "
+                                     f"D = {step_data['initial_buffers'][3]:#010x}")
+                buffers_label.setFont(QFont("Consolas", 11))
+                buffers_label.setWordWrap(True)
+                buffers_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                buffers_label.setStyleSheet("margin: 10px; padding: 10px;")
+                self.rounds_layout.addWidget(buffers_label)
+            
+            # Создаем новые секции для блоков и раундов
+            blocks_data = step_data.get('blocks', [])
+            
+            for block_idx, block_data in enumerate(blocks_data):
+                # Секция для блока
+                block_section = CollapsibleSection(f"Блок {block_idx + 1}")
+                
+                # Информация о блоке данных
+                block_info = QLabel(f"Данные блока:\n{block_data['block_hex']}")
+                block_info.setFont(QFont("Consolas", 11))
+                block_info.setWordWrap(True)
+                block_section.add_content(block_info)
+                
+                # Секции для раундов внутри блока
+                for round_idx, round_data in enumerate(block_data['rounds']):
+                    round_section = CollapsibleSection(f"Раунд {round_idx + 1}")
+                    
+                    # Добавляем 16 подвкладок для каждого шага в раунде
+                    step_data_list = round_data['steps']
+                    for step_idx, step_info in enumerate(step_data_list):
+                        step_section = CollapsibleSection(f"Шаг {step_idx + 1}")
+                        step_section.add_text(step_info)
+                        round_section.add_content(step_section)
+                    
+                    block_section.add_content(round_section)
+                
+                # Добавляем информацию о буферах после обработки блока
+                if 'final_buffers' in block_data:
+                    buffers = block_data['final_buffers']
+                    block_buffers = QLabel(f"\nБуферы после обработки блока {block_idx + 1}:\n"
+                                          f"A = {buffers[0]:#010x}, "
+                                          f"B = {buffers[1]:#010x}, "
+                                          f"C = {buffers[2]:#010x}, "
+                                          f"D = {buffers[3]:#010x}")
+                    # Исправление: устанавливаем шрифт и перенос строк для QLabel, а не для списка buffers
+                    block_buffers.setFont(QFont("Consolas", 11))
+                    block_buffers.setWordWrap(True)
+                    block_section.add_content(block_buffers)
+                
+                self.collapsible_sections.append(block_section)
+                self.rounds_layout.addWidget(block_section)
+            
+            # Добавляем финальный хэш, если есть
+            if 'final_hash' in step_data:
+                final_section = CollapsibleSection("Итоговый результат")
+                final_section.add_text(step_data['final_hash'])
+                self.collapsible_sections.append(final_section)
+                self.rounds_layout.addWidget(final_section)
+        
+        else:
+            # Запасной вариант для неизвестного формата
+            self.visualization.setText(str(step_data))
+            self.visualization.show()
+            self.rounds_container.hide()
 
     def store_step(self, text):
         self.steps.append(f"{text}\n")
+        
+    def store_structured_step(self, step_data):
+        """Сохраняет структурированный шаг для визуализации раундов"""
+        self.steps.append(step_data)
 
     def calculate_md5(self):
         self.visualization.clear()
@@ -296,49 +519,151 @@ class MD5VisualizerWindow(QMainWindow):
         if not text:
             QMessageBox.warning(self, "Предупреждение", "Пожалуйста, введите текст для хеширования.")
             return
+            
+        # Показываем прогресс-бар
+        self.progress_bar.setValue(0)
+        self.progress_bar.show()
+        self.progress_bar.repaint()  # Форсируем обновление UI
 
-        # Step 1: Convert to bytes
-        byte_data = text_to_bytearray(text)
-        self.store_step(f"Шаг 1: Преобразование текста в байты\n{bytearray_visualize_with_chars(byte_data)}")
+        try:
+            # Шаг 1: Преобразование в байты
+            self.progress_bar.setValue(10)
+            self.progress_bar.repaint()
+            byte_data = text_to_bytearray(text)
+            self.store_step(f"Шаг 1: Преобразование текста в байты\n{bytearray_visualize_with_chars(byte_data)}")
 
-        # Step 2: Add padding
-        padded_data = add_padding(byte_data)
-        self.store_step(f"Шаг 2: Добавление padding\n{visualize_padding(byte_data, padded_data)}")
+            # Шаг 2: Добавление padding
+            self.progress_bar.setValue(20)
+            self.progress_bar.repaint()
+            padded_data = add_padding(byte_data)
+            self.store_step(f"Шаг 2: Добавление padding\n{visualize_padding(byte_data, padded_data)}")
 
-        # Step 3: Initialize buffers
-        buffers = buffer_init()
-        self.store_step(f"Шаг 3: Инициализация буферов\n" + 
-                      "\n".join(f"{name}: {value:08x}" for name, value in 
-                              zip(['A', 'B', 'C', 'D'], buffers)))
+            # Шаг 3: Инициализация буферов
+            self.progress_bar.setValue(30)
+            self.progress_bar.repaint()
+            buffers = buffer_init()
+            self.store_step(f"Шаг 3: Инициализация буферов\n" + 
+                          "\n".join(f"{name}: {value:08x}" for name, value in 
+                                  zip(['A', 'B', 'C', 'D'], buffers)))
 
-        # Step 4: Process blocks with detailed visualization
-        final_buffers = process_blocks_with_detailed_visualization(padded_data, buffers, self.store_step)
+            # Шаг 4: Обработка блоков с подробной визуализацией
+            self.progress_bar.setValue(40)
+            self.progress_bar.repaint()
+            
+            # Создаем структуру для хранения данных о раундах
+            blocks_data = []
+            
+            # Обновленная функция для хранения структурированных данных
+            def block_callback(block_index, block_hex, rounds_data, buffers):
+                # Преобразуем rounds_data в структуру с раундами и шагами
+                structured_rounds = []
+                
+                # Разбиваем данные на раунды (их 4)
+                round_texts = []
+                current_round = -1
+                
+                for line in rounds_data:
+                    if line.startswith("=== Раунд "):
+                        if current_round >= 0:
+                            round_texts.append(current_round_text)
+                        current_round = int(line.split()[2]) - 1
+                        current_round_text = []  # Изменено: не включаем заголовок раунда в список строк
+                    elif current_round >= 0:
+                        current_round_text.append(line)
+                
+                if current_round >= 0:
+                    round_texts.append(current_round_text)
+                
+                # Для каждого раунда создаем структуру с шагами
+                for round_idx, round_text in enumerate(round_texts):
+                    steps = []
+                    current_step_text = []
+                    
+                    for line in round_text:
+                        if line.startswith("Шаг "):
+                            if current_step_text:
+                                steps.append("\n".join(current_step_text))
+                            current_step_text = [line]
+                        else:
+                            current_step_text.append(line)
+                    
+                    if current_step_text:
+                        steps.append("\n".join(current_step_text))
+                    
+                    structured_rounds.append({
+                        'index': round_idx,
+                        'steps': steps
+                    })
+                
+                # Добавляем структурированные данные о блоке
+                blocks_data.append({
+                    'block_index': block_index,
+                    'block_hex': block_hex,
+                    'rounds': structured_rounds,
+                    'final_buffers': buffers.copy()
+                })
+                
+                # Обновляем прогресс-бар (от 40% до 80%)
+                progress = 40 + int(40 * (block_index + 1) / ((len(padded_data) + 63) // 64))
+                self.progress_bar.setValue(progress)
+                self.progress_bar.repaint()
+            
+            final_buffers = process_blocks_with_detailed_visualization(
+                padded_data, buffers.copy(), block_callback
+            )
 
-        # Step 5: Final hash
-        result = finalize_hash(final_buffers)
-        buffer_visualization = []
-        for buffer in final_buffers:
-            # Convert to hex without '0x' prefix and pad with zeros
-            hex_value = f"{buffer:08x}"
-            # Group by 2 chars and reverse the groups (little-endian)
-            pairs = [hex_value[i:i+2] for i in range(0, 8, 2)]
-            formatted = ' '.join(pairs[::-1])
-            buffer_visualization.append(formatted)
-        
-        self.store_step(
-            f"Шаг 5: Финальный хэш\n\n"
-            f"Буферы в little-endian формате:\n"
-            f"A: {buffer_visualization[0]}\n"
-            f"B: {buffer_visualization[1]}\n"
-            f"C: {buffer_visualization[2]}\n"
-            f"D: {buffer_visualization[3]}\n\n"
-            f"Итоговый хэш (конкатенация буферов):\n{result}"
-        )
+            # Шаг 5: Финальный хеш
+            self.progress_bar.setValue(90)
+            self.progress_bar.repaint()
+            result = finalize_hash(final_buffers)
+            buffer_visualization = []
+            for buffer in final_buffers:
+                # Convert to hex without '0x' prefix and pad with zeros
+                hex_value = f"{buffer:08x}"
+                # Group by 2 chars and reverse the groups (little-endian)
+                pairs = [hex_value[i:i+2] for i in range(0, 8, 2)]
+                formatted = ' ' .join(pairs[::-1])
+                buffer_visualization.append(formatted)
+            
+            final_hash_text = (
+                f"Буферы в little-endian формате:\n"
+                f"A: {buffer_visualization[0]}\n"
+                f"B: {buffer_visualization[1]}\n"
+                f"C: {buffer_visualization[2]}\n"
+                f"D: {buffer_visualization[3]}\n\n"
+                f"Итоговый хеш (конкатенация буферов):\n{result}"
+            )
+            
+            # Добавляем структурированный шаг для обработки блоков
+            rounds_step = {
+                'type': 'rounds',
+                'initial_buffers': buffer_init(),  # Начальные значения буферов
+                'blocks': blocks_data,
+                'final_hash': final_hash_text
+            }
+            self.store_structured_step(rounds_step)
+            
+            # Добавляем 5 шаг как обычный текст
+            self.store_step(f"Шаг 5: Финальный хэш\n\n{final_hash_text}")
 
-        # Show first step and update navigation
-        if self.steps:
-            self.visualization.setText(self.steps[0])
-            self.update_navigation_buttons()
+            # Все готово
+            self.progress_bar.setValue(100)
+            self.progress_bar.repaint()
+
+            # Скрываем прогресс-бар после выполнения
+            self.progress_bar.hide()
+            
+            # Показываем первый шаг
+            if self.steps:
+                self.current_step = 0
+                self.display_current_step()
+                self.update_navigation_buttons()
+                
+        except Exception as e:
+            self.progress_bar.hide()
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка при вычислении хеша:\n{str(e)}")
+            import traceback
+            traceback.print_exc()
     
     def reset_visualization(self):
         """Сброс визуализации и очистка интерфейса"""
