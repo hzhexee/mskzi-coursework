@@ -1,4 +1,5 @@
 import sys
+import os
 from PyQt6.QtWidgets import (
     QApplication, 
     QMainWindow, 
@@ -12,9 +13,13 @@ from PyQt6.QtWidgets import (
     QMenu, 
     QLabel, 
     QFrame,
-    QScrollArea)
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction, QFont
+    QScrollArea,
+    QMessageBox,
+    QFileDialog,
+    QDialog,
+    QSizePolicy)
+from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtGui import QAction, QFont, QIcon, QPixmap, QClipboard
 from md5_algorithm import (
     text_to_bytearray,
     add_padding,
@@ -25,28 +30,98 @@ from md5_algorithm import (
     bytearray_visualize_with_chars
 )
 
-## TODO: 
-# 1. Добавить кнопку "Сбросить" для очистки визуализации; 
-# 2. Добавить кнопку "Сохранить" в MenuBar для сохранения визуализации в файл
-# 3. Добавить кнопку "Скопировать" в MenuBar для копирования визуализации в буфер обмена
-# 4. Добавить кнопку "О программе" в MenuBar для отображения информации о программе
-# 5. Добавить кнопку "Справка" в MenuBar для отображения справочной информации
-# 6. Добавить возможность изменения размера шрифта в визуализации
-# 7. Добавить темную тему и переключатель тем
-# 8. Добавить возможность экспорта визуализации в PDF
-# 9. Добавить анимацию при переходе между шагами
-# 10. Добавить возможность ввода текста в hex формате
-# 11. Добавить индикатор прогресса вычисления для больших входных данных
-# 12. Добавить возможность сравнения двух хешей
-# 13. Добавить визуализацию битовых операций на каждом шаге
+class AboutDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("О программе")
+        self.setMinimumWidth(400)
+        
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        
+        title = QLabel("MD5 Step By Step")
+        title.setObjectName("title")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        description = QLabel(
+            "Визуализатор алгоритма хеширования MD5.\n"
+            "Версия: 1.0\n\n"
+            "© 2023 MD5StepByStep\n\n"
+            "Это приложение демонстрирует пошаговую работу алгоритма MD5,\n"
+            "позволяя увидеть все этапы преобразования данных\n"
+            "от исходного текста до финального хеш-значения."
+        )
+        description.setWordWrap(True)
+        description.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        close_button = QPushButton("Закрыть")
+        close_button.clicked.connect(self.accept)
+        
+        layout.addWidget(title)
+        layout.addSpacing(10)
+        layout.addWidget(description)
+        layout.addSpacing(20)
+        layout.addWidget(close_button)
+
+class HelpDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Справка")
+        self.setMinimumSize(500, 400)
+        
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        
+        title = QLabel("Руководство пользователя")
+        title.setObjectName("title")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        help_text = QTextEdit()
+        help_text.setReadOnly(True)
+        help_text.setHtml("""
+            <h2>Как использовать визуализатор MD5</h2>
+            <ol>
+                <li><b>Введите текст</b> в поле ввода.</li>
+                <li>Нажмите кнопку <b>Вычислить хеш</b>.</li>
+                <li>Используйте кнопки <b>Предыдущий шаг</b> и <b>Следующий шаг</b> для навигации по этапам алгоритма.</li>
+                <li>Для сброса визуализации нажмите кнопку <b>Сбросить</b>.</li>
+            </ol>
+            
+            <h3>Сохранение результатов:</h3>
+            <p>В меню <b>Файл</b> вы можете:</p>
+            <ul>
+                <li>Сохранить текущий шаг в файл</li>
+                <li>Скопировать в буфер обмена</li>
+            </ul>
+            
+            <h3>Этапы алгоритма MD5:</h3>
+            <ol>
+                <li><b>Преобразование текста в байты</b> - исходный текст преобразуется в последовательность байтов.</li>
+                <li><b>Добавление padding</b> - дополнение данных до размера, кратного 512 битам.</li>
+                <li><b>Инициализация буферов</b> - инициализация четырех 32-битных регистров A, B, C и D.</li>
+                <li><b>Обработка блоков</b> - последовательная обработка 512-битных блоков данных.</li>
+                <li><b>Финальный хеш</b> - формирование 128-битного хеш-значения из буферов.</li>
+            </ol>
+        """)
+        
+        close_button = QPushButton("Закрыть")
+        close_button.clicked.connect(self.accept)
+        
+        layout.addWidget(title)
+        layout.addWidget(help_text)
+        layout.addWidget(close_button)
 
 class StyledFrame(QFrame):
     def __init__(self, title="", parent=None):
         super().__init__(parent)
+        self.setObjectName("styled")
         self.setFrameStyle(QFrame.Shape.StyledPanel | QFrame.Shadow.Raised)
         self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(15, 15, 15, 15)
+        
         if title:
             title_label = QLabel(title)
+            title_label.setObjectName("title")
             self.layout.addWidget(title_label)
 
 class MD5VisualizerWindow(QMainWindow):
@@ -59,55 +134,87 @@ class MD5VisualizerWindow(QMainWindow):
     def setupUI(self):
         # Create menu bar
         menubar = self.menuBar()
-        file_menu = menubar.addMenu("Настройки")
         
-        # Add menu actions
-        hash_string_action = QAction("Хеш от строки", self)
-        hash_string_action.setShortcut("Ctrl+H")
+        # File menu
+        file_menu = menubar.addMenu("Файл")
+        
+        save_action = QAction("Сохранить", self)
+        save_action.setShortcut("Ctrl+S")
+        save_action.triggered.connect(self.save_to_file)
+        
+        copy_action = QAction("Копировать", self)
+        copy_action.setShortcut("Ctrl+C")
+        copy_action.triggered.connect(self.copy_to_clipboard)
+        
         exit_action = QAction("Выход", self)
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(QApplication.quit)
         
-        file_menu.addAction(hash_string_action)
+        file_menu.addAction(save_action)
+        file_menu.addAction(copy_action)
         file_menu.addSeparator()
         file_menu.addAction(exit_action)
+        
+        # Help menu
+        help_menu = menubar.addMenu("Помощь")
+        
+        about_action = QAction("О программе", self)
+        about_action.triggered.connect(self.show_about_dialog)
+        
+        help_action = QAction("Справка", self)
+        help_action.triggered.connect(self.show_help_dialog)
+        
+        help_menu.addAction(help_action)
+        help_menu.addAction(about_action)
 
         # Main widget and layout
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
+        main_layout.setSpacing(15)
+        main_layout.setContentsMargins(20, 20, 20, 20)
 
         # Input section
-        input_frame = StyledFrame("Ввод")
+        input_frame = StyledFrame("Ввод данных")
         input_layout = QHBoxLayout()
         
         self.input_field = QLineEdit()
-        self.input_field.setPlaceholderText("Введите текст...")
+        self.input_field.setPlaceholderText("Введите текст для хеширования...")
+        
+        self.hash_button = QPushButton("Вычислить хеш")
+        self.hash_button.clicked.connect(self.calculate_md5)
+        self.hash_button.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        
+        self.reset_button = QPushButton("Сбросить")
+        self.reset_button.setObjectName("resetButton")
+        self.reset_button.clicked.connect(self.reset_visualization)
+        self.reset_button.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         
         input_layout.addWidget(self.input_field)
+        input_layout.addWidget(self.hash_button)
+        input_layout.addWidget(self.reset_button)
+        
         input_frame.layout.addLayout(input_layout)
         main_layout.addWidget(input_frame)
 
         # Visualization section
-        viz_frame = StyledFrame("Визуализация")
+        viz_frame = StyledFrame("Визуализация алгоритма")
         
         # Add navigation controls
         nav_layout = QHBoxLayout()
         self.prev_button = QPushButton("◀ Предыдущий шаг") 
         self.next_button = QPushButton("Следующий шаг ▶")
-        self.hash_button = QPushButton("Вычислить хеш")
         
         self.prev_button.clicked.connect(self.show_previous_step)
         self.next_button.clicked.connect(self.show_next_step)
-        self.hash_button.clicked.connect(self.calculate_md5)
         
         self.step_label = QLabel("Шаг 0/0")
+        self.step_label.setObjectName("stepLabel")
         self.step_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         nav_layout.addWidget(self.prev_button)
         nav_layout.addWidget(self.step_label)
         nav_layout.addWidget(self.next_button)
-        nav_layout.addWidget(self.hash_button)
         
         # Initially hide navigation buttons
         self.prev_button.hide()
@@ -128,16 +235,14 @@ class MD5VisualizerWindow(QMainWindow):
         # Заменяем QTextEdit на QLabel
         self.visualization = QLabel()
         self.visualization.setWordWrap(True)
-        self.visualization.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.visualization.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         self.visualization.setTextFormat(Qt.TextFormat.PlainText)
-        self.visualization.setFont(QFont("Segoe UI", 12))
+        self.visualization.setFont(QFont("Consolas", 12))
         self.visualization.setStyleSheet("""
-            QLabel {
-                padding: 20px;
-                line-height: 1.5;
-                background: transparent;
-                color: #333333;
-            }
+            padding: 20px;
+            line-height: 1.5;
+            background: transparent;
+            color: #333333;
         """)
         
         content_layout.addWidget(self.visualization)
@@ -146,7 +251,7 @@ class MD5VisualizerWindow(QMainWindow):
         scroll_area.setWidget(content_widget)
         viz_frame.layout.addWidget(scroll_area)
         
-        main_layout.addWidget(viz_frame)
+        main_layout.addWidget(viz_frame, 1)  # 1 = stretch factor
 
         # Initialize step tracking
         self.current_step = 0
@@ -158,20 +263,13 @@ class MD5VisualizerWindow(QMainWindow):
             self.prev_button.hide()
             self.next_button.hide()
             self.step_label.hide()
-            self.hash_button.show()
             return
 
-        self.next_button.show()
-        self.step_label.show()
-        self.hash_button.hide()
-        
         # Show prev button only if not on first step
-        if self.current_step > 0:
-            self.prev_button.show()
-        else:
-            self.prev_button.hide()
+        self.prev_button.setVisible(self.current_step > 0)
+        self.next_button.setVisible(self.current_step < len(self.steps) - 1)
+        self.step_label.show()
         
-        self.next_button.setEnabled(self.current_step < len(self.steps) - 1)
         self.step_label.setText(f"Шаг {self.current_step + 1}/{len(self.steps)}")
 
     def show_previous_step(self):
@@ -196,11 +294,9 @@ class MD5VisualizerWindow(QMainWindow):
         text = self.input_field.text()
 
         if not text:
+            QMessageBox.warning(self, "Предупреждение", "Пожалуйста, введите текст для хеширования.")
             return
 
-        # Hide hash button and show navigation
-        self.update_navigation_buttons()
-        
         # Step 1: Convert to bytes
         byte_data = text_to_bytearray(text)
         self.store_step(f"Шаг 1: Преобразование текста в байты\n{bytearray_visualize_with_chars(byte_data)}")
@@ -243,14 +339,66 @@ class MD5VisualizerWindow(QMainWindow):
         if self.steps:
             self.visualization.setText(self.steps[0])
             self.update_navigation_buttons()
+    
+    def reset_visualization(self):
+        """Сброс визуализации и очистка интерфейса"""
+        self.visualization.clear()
+        self.input_field.clear()
+        self.steps = []
+        self.current_step = 0
+        self.update_navigation_buttons()
+    
+    def save_to_file(self):
+        """Сохраняет текущий шаг визуализации в файл"""
+        if not self.steps or self.current_step >= len(self.steps):
+            QMessageBox.information(self, "Информация", "Нет данных для сохранения.")
+            return
+        
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Сохранить визуализацию",
+            "",
+            "Текстовые файлы (*.txt);;Все файлы (*)"
+        )
+        
+        if file_path:
+            try:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(self.steps[self.current_step])
+                QMessageBox.information(self, "Успех", f"Файл успешно сохранен:\n{file_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить файл:\n{str(e)}")
+    
+    def copy_to_clipboard(self):
+        """Копирует текущий шаг визуализации в буфер обмена"""
+        if not self.steps or self.current_step >= len(self.steps):
+            QMessageBox.information(self, "Информация", "Нет данных для копирования.")
+            return
+        
+        clipboard = QApplication.clipboard()
+        clipboard.setText(self.steps[self.current_step])
+        QMessageBox.information(self, "Успех", "Данные скопированы в буфер обмена.")
+    
+    def show_about_dialog(self):
+        """Отображает диалог с информацией о программе"""
+        dialog = AboutDialog(self)
+        dialog.exec()
+    
+    def show_help_dialog(self):
+        """Отображает диалог со справочной информацией"""
+        dialog = HelpDialog(self)
+        dialog.exec()
 
 def main():
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
     
     # Load and apply CSS styles
-    with open('app_gui_styles.css', 'r') as f:
-        app.setStyleSheet(f.read())
+    try:
+        with open(os.path.join(os.path.dirname(__file__), 'app_gui_styles.css'), 'r') as f:
+            app.setStyleSheet(f.read())
+    except Exception as e:
+        print(f"Error loading styles: {e}")
     
     window = MD5VisualizerWindow()
     window.show()
