@@ -893,7 +893,7 @@ def main():
         with open(os.path.join(os.path.dirname(__file__), 'app_gui_styles.css'), 'r') as f:
             app.setStyleSheet(f.read())
     except Exception as e:
-        print(f"Error loading styles: {e}")
+        print(f"Ошибка загрузки стилей: {e}")
     
     window = MD5VisualizerWindow()
     window.show()
