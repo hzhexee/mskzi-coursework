@@ -819,17 +819,89 @@ class MD5VisualizerWindow(QMainWindow):
         self.current_step = 0
         self.update_navigation_buttons()
     
+    def convert_step_to_text(self, step_data):
+        """
+        Преобразует шаг визуализации в текстовый формат.
+        
+        Обрабатывает как простые текстовые шаги, так и структурированные
+        данные о раундах MD5.
+        
+        Args:
+            step_data: Данные шага (строка или словарь).
+            
+        Returns:
+            str: Текстовое представление шага.
+        """
+        if isinstance(step_data, str):
+            # Шаг уже в текстовом формате
+            return step_data
+        elif isinstance(step_data, dict) and step_data.get('type') == 'rounds':
+            # Структурированные данные для раундов
+            result = []
+            result.append("Шаг 4: Обработка блоков данных")
+            
+            # Добавляем начальные значения буферов
+            if step_data.get('initial_buffers'):
+                buffers = step_data['initial_buffers']
+                result.append(f"\nИсходные значения буферов:")
+                result.append(f"A = {buffers[0]:#010x}, B = {buffers[1]:#010x}, "
+                             f"C = {buffers[2]:#010x}, D = {buffers[3]:#010x}\n")
+            
+            # Обрабатываем каждый блок
+            for block_idx, block_data in enumerate(step_data.get('blocks', [])):
+                result.append(f"\n--- Блок {block_idx + 1} ---")
+                result.append(f"Данные блока:\n{block_data['block_hex']}\n")
+                
+                # Обрабатываем раунды внутри блока
+                for round_idx, round_data in enumerate(block_data['rounds']):
+                    result.append(f"=== Раунд {round_idx + 1} ===")
+                    
+                    # Добавляем шаги в раунде
+                    for step_idx, step_info in enumerate(round_data['steps']):
+                        result.append(f"\nШаг {step_idx + 1}:")
+                        result.append(step_info)
+                
+                # Добавляем информацию о буферах после блока
+                if 'final_buffers' in block_data:
+                    buffers = block_data['final_buffers']
+                    result.append(f"\nБуферы после обработки блока {block_idx + 1}:")
+                    result.append(f"A = {buffers[0]:#010x}, B = {buffers[1]:#010x}, "
+                                f"C = {buffers[2]:#010x}, D = {buffers[3]:#010x}")
+            
+            # Добавляем итоговый хеш
+            if 'final_hash' in step_data:
+                result.append("\n--- Итоговый результат ---")
+                result.append(step_data['final_hash'])
+                
+            return "\n".join(result)
+        else:
+            # Неизвестный формат - преобразуем в строку
+            return str(step_data)
+
     def save_to_file(self):
         """
-        Сохраняет текущий шаг визуализации в файл.
+        Сохраняет шаги визуализации в файл.
         
-        Предлагает пользователю выбрать файл для сохранения и записывает
-        в него текущий шаг визуализации.
+        Предоставляет возможность выбрать между сохранением текущего шага
+        или всех шагов визуализации в один файл.
         """
-        if not self.steps or self.current_step >= len(self.steps):
+        if not self.steps:
             QMessageBox.information(self, "Информация", "Нет данных для сохранения.")
             return
         
+        # Создаем диалог для выбора режима сохранения
+        msg_box = QMessageBox()
+        msg_box.setWindowTitle("Сохранение результатов")
+        msg_box.setText("Выберите, что вы хотите сохранить:")
+        current_btn = msg_box.addButton("Текущий шаг", QMessageBox.ButtonRole.AcceptRole)
+        all_steps_btn = msg_box.addButton("Все шаги", QMessageBox.ButtonRole.AcceptRole)
+        cancel_btn = msg_box.addButton("Отмена", QMessageBox.ButtonRole.RejectRole)
+        msg_box.exec()
+        
+        # Если пользователь нажал "Отмена", выходим
+        if msg_box.clickedButton() == cancel_btn:
+            return
+            
         file_path, _ = QFileDialog.getSaveFileName(
             self,
             "Сохранить визуализацию",
@@ -837,13 +909,32 @@ class MD5VisualizerWindow(QMainWindow):
             "Текстовые файлы (*.txt);;Все файлы (*)"
         )
         
-        if file_path:
-            try:
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(self.steps[self.current_step])
-                QMessageBox.information(self, "Успех", f"Файл успешно сохранен:\n{file_path}")
-            except Exception as e:
-                QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить файл:\n{str(e)}")
+        if not file_path:
+            return
+            
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                # Сохраняем текущий шаг или все шаги
+                if msg_box.clickedButton() == current_btn:
+                    # Сохраняем только текущий шаг
+                    step_text = self.convert_step_to_text(self.steps[self.current_step])
+                    f.write(step_text)
+                else:
+                    # Сохраняем все шаги с разделителями
+                    separator = "\n" + "=" * 80 + "\n\n"
+                    all_steps_text = []
+                    
+                    for step_idx, step_data in enumerate(self.steps):
+                        step_header = f"ШАГ {step_idx + 1}/{len(self.steps)}\n"
+                        step_text = self.convert_step_to_text(step_data)
+                        all_steps_text.append(step_header + step_text)
+                    
+                    f.write(separator.join(all_steps_text))
+            
+            QMessageBox.information(self, "Успех", f"Файл успешно сохранен:\n{file_path}")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить файл:\n{str(e)}")
     
     def copy_to_clipboard(self):
         """
