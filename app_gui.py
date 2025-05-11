@@ -658,9 +658,18 @@ class MD5VisualizerWindow(QMainWindow):
         text = self.input_field.text()
 
         if not text:
-            QMessageBox.warning(self, "Предупреждение", "Пожалуйста, введите текст для хеширования.")
-            return
+            # Спрашиваем у пользователя подтверждение для хеширования пустой строки
+            confirm = QMessageBox()
+            confirm.setWindowTitle("Подтверждение")
+            confirm.setText("Вы собираетесь вычислить MD5-хеш для пустой строки.")
+            confirm.setInformativeText("Продолжить?")
+            confirm.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            confirm.setDefaultButton(QMessageBox.StandardButton.No)
+            result = confirm.exec()
             
+            if result != QMessageBox.StandardButton.Yes:
+                return
+    
         # Показываем прогресс-бар
         self.progress_bar.setValue(0)
         self.progress_bar.show()
