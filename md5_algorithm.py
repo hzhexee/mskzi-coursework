@@ -215,48 +215,6 @@ S = [
     [6, 10, 15, 21]
 ]
 
-def md5_process_block(block, buffers):
-    """
-    Обрабатывает один 512-битный блок данных.
-    
-    Функция реализует основной цикл алгоритма MD5, который состоит из 64 шагов,
-    разделённых на 4 раунда по 16 шагов. На каждом шаге используются различные 
-    нелинейные функции (F, G, H, I) и выполняются операции над буферами.
-    
-    Args:
-        block: 64-байтный блок данных для обработки.
-        buffers: Текущие значения буферов MD5 [A, B, C, D].
-        
-    Returns:
-        list: Обновленные значения буферов.
-    """
-    M = [int.from_bytes(block[i:i + 4], byteorder='little') for i in range(0, 64, 4)]
-    A, B, C, D = buffers
-
-    for round_index, func in enumerate([F, G, H, I]):
-        for i in range(16):
-            step = round_index * 16 + i
-            if round_index == 0:
-                k = i
-            elif round_index == 1:
-                k = (5 * i + 1) % 16
-            elif round_index == 2:
-                k = (3 * i + 5) % 16
-            else:
-                k = (7 * i) % 16
-
-            s = S[round_index][i % 4]
-            temp = (A + func(B, C, D) + M[k] + T[step]) & 0xFFFFFFFF
-            new_A = (B + left_rotate(temp, s)) & 0xFFFFFFFF
-            A, D, C, B = D, C, B, new_A
-
-    buffers[0] = (buffers[0] + A) & 0xFFFFFFFF
-    buffers[1] = (buffers[1] + B) & 0xFFFFFFFF
-    buffers[2] = (buffers[2] + C) & 0xFFFFFFFF
-    buffers[3] = (buffers[3] + D) & 0xFFFFFFFF
-
-    return buffers
-
 def md5_process_block_with_details(block, buffers):
     """
     Обрабатывает блок с подробной визуализацией.
@@ -322,25 +280,6 @@ def md5_process_block_with_details(block, buffers):
     
     return buffers, rounds_data
 
-def process_blocks(data: bytes, buffers):
-    """
-    Обрабатывает все блоки данных.
-    
-    Разделяет входные данные на блоки по 64 байта и последовательно 
-    обрабатывает их с помощью функции md5_process_block.
-    
-    Args:
-        data: Байтовый массив данных для обработки.
-        buffers: Начальные значения буферов MD5 [A, B, C, D].
-        
-    Returns:
-        list: Финальные значения буферов.
-    """
-    for i in range(0, len(data), 64):
-        block = data[i:i + 64]
-        buffers = md5_process_block(block, buffers)
-    return buffers
-
 def process_blocks_with_detailed_visualization(data: bytes, buffers, callback=None):
     """
     Обрабатывает блоки с подробной визуализацией.
@@ -384,28 +323,6 @@ def finalize_hash(buffers):
     """
     return ''.join(buffer.to_bytes(4, byteorder='little').hex() for buffer in buffers)
 
-def calculate_md5(text: str) -> str:
-    """
-    Вычисляет MD5 хеш для входного текста.
-    
-    Выполняет полный процесс вычисления MD5-хеша:
-    1. Преобразует текст в байтовый массив
-    2. Добавляет padding
-    3. Инициализирует буферы
-    4. Обрабатывает все блоки данных
-    5. Формирует финальный хеш
-    
-    Args:
-        text: Входная строка текста.
-        
-    Returns:
-        str: 32-символьная строка, представляющая MD5 хеш.
-    """
-    byte_data = text_to_bytearray(text)
-    padded_data = add_padding(byte_data)
-    buffers = buffer_init()
-    final_buffers = process_blocks(padded_data, buffers)
-    return finalize_hash(final_buffers)
 
 def visualize_padding(original: bytes, padded: bytearray) -> str:
     """
