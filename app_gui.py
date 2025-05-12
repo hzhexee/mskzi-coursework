@@ -316,7 +316,7 @@ class MD5VisualizerWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Визуализация алгоритма хеширования MD5")
-        self.setMinimumSize(1200, 800)
+        self.setMinimumSize(800, 800)
         self.setupUI()
 
     def setupUI(self):

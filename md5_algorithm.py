@@ -1,6 +1,15 @@
 import math
 import binascii
 
+T = [int((2 ** 32) * abs(math.sin(i + 1))) & 0xFFFFFFFF for i in range(64)]
+
+S = [
+    [7, 12, 17, 22],
+    [5, 9, 14, 20],
+    [4, 11, 16, 23],
+    [6, 10, 15, 21]
+]
+
 def text_to_bytearray(text: str) -> bytes:
     """
     Преобразует текст в байтовый массив.
@@ -206,15 +215,6 @@ def left_rotate(x, c):
     """
     return ((x << c) | (x >> (32 - c))) & 0xFFFFFFFF
 
-T = [int((2 ** 32) * abs(math.sin(i + 1))) & 0xFFFFFFFF for i in range(64)]
-
-S = [
-    [7, 12, 17, 22],
-    [5, 9, 14, 20],
-    [4, 11, 16, 23],
-    [6, 10, 15, 21]
-]
-
 def md5_process_block_with_details(block, buffers):
     """
     Обрабатывает блок с подробной визуализацией.
@@ -322,7 +322,6 @@ def finalize_hash(buffers):
         str: Строка, представляющая 128-битный MD5 хеш.
     """
     return ''.join(buffer.to_bytes(4, byteorder='little').hex() for buffer in buffers)
-
 
 def visualize_padding(original: bytes, padded: bytearray) -> str:
     """
