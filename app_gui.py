@@ -303,7 +303,7 @@ class CollapsibleSection(QWidget):
         """
         label = QLabel(text)
         label.setWordWrap(True)
-        label.setFont(QFont("Consolas", 11))
+        label.setFont(QFont("Consolas", 14))  # Увеличил размер с 11 до 14
         self.add_content(label)
 
 class MD5VisualizerWindow(QMainWindow):
@@ -316,7 +316,7 @@ class MD5VisualizerWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Визуализация алгоритма хеширования MD5")
-        self.setMinimumSize(800, 800)
+        self.setMinimumSize(800, 600)
         self.setupUI()
 
     def setupUI(self):
@@ -441,7 +441,7 @@ class MD5VisualizerWindow(QMainWindow):
         self.visualization.setWordWrap(True)
         self.visualization.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         self.visualization.setTextFormat(Qt.TextFormat.PlainText)
-        self.visualization.setFont(QFont("Consolas", 12))
+        self.visualization.setFont(QFont("Consolas", 15))  # Увеличил размер с 12 до 15
         self.visualization.setStyleSheet("""
             padding: 20px;
             line-height: 1.5;
@@ -574,7 +574,7 @@ class MD5VisualizerWindow(QMainWindow):
                 
                 # Информация о блоке данных
                 block_info = QLabel(f"Данные блока:\n{block_data['block_hex']}")
-                block_info.setFont(QFont("Consolas", 11))
+                block_info.setFont(QFont("Consolas", 14))  # Увеличил размер с 11 до 14
                 block_info.setWordWrap(True)
                 block_section.add_content(block_info)
                 
@@ -599,8 +599,7 @@ class MD5VisualizerWindow(QMainWindow):
                                           f"B = {buffers[1]:#010x}, "
                                           f"C = {buffers[2]:#010x}, "
                                           f"D = {buffers[3]:#010x}")
-                    # Исправление: устанавливаем шрифт и перенос строк для QLabel, а не для списка buffers
-                    block_buffers.setFont(QFont("Consolas", 11))
+                    block_buffers.setFont(QFont("Consolas", 14))  # Увеличил размер с 11 до 14
                     block_buffers.setWordWrap(True)
                     block_section.add_content(block_buffers)
                 
