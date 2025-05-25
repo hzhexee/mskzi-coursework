@@ -12,7 +12,6 @@ QTabWidget::pane {
     border: none;
     background: #ffffff;
     border-radius: 10px;
-    /* Удаляем свойство box-shadow */
 }
 
 QTabBar::tab {

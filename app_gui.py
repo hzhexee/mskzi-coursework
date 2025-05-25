@@ -45,7 +45,7 @@ class AboutDialog(QDialog):
         layout = QVBoxLayout()
         self.setLayout(layout)
         
-        title = QLabel("MD5 Step By Step")
+        title = QLabel("MD5 Пошаговая реализация")
         title.setObjectName("title")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
@@ -326,10 +326,10 @@ class MD5VisualizerWindow(QMainWindow):
         Создает меню, поля ввода, кнопки и область визуализации.
         Инициализирует отслеживание шагов визуализации.
         """
-        # Create menu bar
+        # Создаем меню
         menubar = self.menuBar()
         
-        # File menu
+        # Файл-меню
         file_menu = menubar.addMenu("Файл")
         
         save_action = QAction("Сохранить", self)
@@ -349,7 +349,7 @@ class MD5VisualizerWindow(QMainWindow):
         file_menu.addSeparator()
         file_menu.addAction(exit_action)
         
-        # Help menu
+        # Меню помощи
         help_menu = menubar.addMenu("Помощь")
         
         about_action = QAction("О программе", self)
@@ -361,14 +361,14 @@ class MD5VisualizerWindow(QMainWindow):
         help_menu.addAction(help_action)
         help_menu.addAction(about_action)
 
-        # Main widget and layout
+        # Основной виджет и лейаут
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
         main_layout.setSpacing(15)
         main_layout.setContentsMargins(20, 20, 20, 20)
 
-        # Input section
+        # Секция ввода
         input_frame = StyledFrame("Ввод данных")
         input_layout = QHBoxLayout()
         
@@ -391,10 +391,10 @@ class MD5VisualizerWindow(QMainWindow):
         input_frame.layout.addLayout(input_layout)
         main_layout.addWidget(input_frame)
 
-        # Visualization section
+        # Секция визуализации
         viz_frame = StyledFrame("Визуализация алгоритма")
         
-        # Add navigation controls
+        # Кнопки навигации
         nav_layout = QHBoxLayout()
         self.prev_button = QPushButton("◀ Предыдущий шаг") 
         self.next_button = QPushButton("Следующий шаг ▶")
@@ -410,7 +410,7 @@ class MD5VisualizerWindow(QMainWindow):
         nav_layout.addWidget(self.step_label)
         nav_layout.addWidget(self.next_button)
         
-        # Initially hide navigation buttons
+        # Прятаем кнопки навигации
         self.prev_button.hide()
         self.next_button.hide()
         self.step_label.hide()
@@ -463,9 +463,9 @@ class MD5VisualizerWindow(QMainWindow):
         scroll_area.setWidget(content_widget)
         viz_frame.layout.addWidget(scroll_area)
         
-        main_layout.addWidget(viz_frame, 1)  # 1 = stretch factor
+        main_layout.addWidget(viz_frame, 1)
 
-        # Initialize step tracking
+        # Инициализируем счетчик шагов
         self.current_step = 0
         self.steps = []
         self.collapsible_sections = []
@@ -484,7 +484,6 @@ class MD5VisualizerWindow(QMainWindow):
             self.step_label.hide()
             return
 
-        # Show prev button only if not on first step
         self.prev_button.setVisible(self.current_step > 0)
         self.next_button.setVisible(self.current_step < len(self.steps) - 1)
         self.step_label.show()
@@ -767,9 +766,7 @@ class MD5VisualizerWindow(QMainWindow):
             result = finalize_hash(final_buffers)
             buffer_visualization = []
             for buffer in final_buffers:
-                # Convert to hex without '0x' prefix and pad with zeros
                 hex_value = f"{buffer:08x}"
-                # Group by 2 chars and reverse the groups (little-endian)
                 pairs = [hex_value[i:i+2] for i in range(0, 8, 2)]
                 formatted = ' ' .join(pairs[::-1])
                 buffer_visualization.append(formatted)
@@ -987,7 +984,7 @@ def main():
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
     
-    # Load and apply CSS styles
+    # Загружаем и применяем CSS стили
     try:
         with open(os.path.join(os.path.dirname(__file__), 'app_gui_styles.css'), 'r') as f:
             app.setStyleSheet(f.read())
